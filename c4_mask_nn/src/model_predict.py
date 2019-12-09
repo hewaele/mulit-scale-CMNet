@@ -76,12 +76,12 @@ def eval_A(pre, mask, image=None):
     FN = np.sum(np.logical_not(pre))-TN
 
     # print(type(TP), FP, TN, FN)
-    precision = TP/(TP+FP)
-    recall = TP/(TP+FN)
+    precision = TP/(TP+FP+0.0000001)
+    recall = TP/(TP+FN+0.000001)
     F1 = (2*precision*recall)/(precision+recall+0.00001)
     return ac, precision, recall, F1
 
-model_path = '../log/my_model_20191206-150731.h5'
+model_path = '../log/my_model_20191206-185825_source_v1.h5'
 model = creat_my_model()
 model.load_weights(model_path)
 
@@ -91,12 +91,13 @@ x_list, y_list = filter_image(img_path)
 
 star = 4000
 end = 5000
+step = 1
 ac = 0
 precision = 0
 recall = 0
 F1 = 0
 count = 0
-for x, y in zip(x_list[star:end:25], y_list[star:end:25]):
+for x, y in zip(x_list[star:end:step], y_list[star:end:step]):
     img_data = img2pre(os.path.join(img_path, x))
     pre = model.predict(img_data/255)
 
@@ -108,7 +109,7 @@ for x, y in zip(x_list[star:end:25], y_list[star:end:25]):
     # Image.Image.show(show_y)
     # Image.Image.show(show_x)
 
-    plt_show(show_pre, show_y, show_x)
+    # plt_show(show_pre, show_y, show_x)
     a, b, c, d = eval_A(show_pre, show_y)
     ac += a
     precision += b
@@ -116,4 +117,4 @@ for x, y in zip(x_list[star:end:25], y_list[star:end:25]):
     F1 += d
 
 print('ac:{} precision:{} recall:{} F1:{}'.
-      format(ac/1000, precision/1000, recall/1000, F1/1000))
+      format(ac/1000*25, precision/1000*25, recall/1000*25, F1/1000*25))

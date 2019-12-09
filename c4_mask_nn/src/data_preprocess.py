@@ -33,12 +33,12 @@ def image_preprocess(image_path, train_x, train_y):
     #将mask转换为二值
     train = []
     mask = []
-    for img_name in train_x[:4000]:
+    for img_name in train_x[:1000]:
         img = Image.open(os.path.join(image_path, img_name)).convert('RGB').resize([256, 256])
         train.append(np.array(img)/255)
         assert np.array(img).shape == (256, 256, 3)
 
-    for img in train_y[:4000]:
+    for img in train_y[:1000]:
         img = Image.open(os.path.join(image_path, img)).convert('L').resize([256, 256])
         mask.append(np.array(img)/255)
     x = np.array(train).reshape([-1, 256, 256, 3])
