@@ -44,17 +44,18 @@ def img2pre(img, channel = 3):
 def show_result(pre_result, mask, source):
     plt.figure()
 
-    plt.subplot(131)
-    pre_result = pre2img(pre_result, 1)
-    plt.imshow(pre_result)
-
-    plt.subplot(132)
-    mask = Image.open(mask).convert('L').resize([256, 256])
-    plt.imshow(mask)
-
-    plt.subplot(133)
-    source = Image.open(source).convert('RGB').resize([256, 256])
-    plt.imshow(source)
+    if pre_result is not None:
+        plt.subplot(131)
+        pre_result = pre2img(pre_result, 1)
+        plt.imshow(pre_result)
+    if mask is not None:
+        plt.subplot(132)
+        mask = Image.open(mask).convert('L').resize([256, 256])
+        plt.imshow(mask)
+    if source is not None:
+        plt.subplot(133)
+        source = Image.open(source).convert('RGB').resize([256, 256])
+        plt.imshow(source)
     plt.show()
 
 
@@ -78,7 +79,9 @@ def eval_protcal(pre_result, mask):
     recall = TP/(TP+FN)
     F1 = 2*TP/(2*TP+FP+FN)
 
-    return TP, FP, TN, FN, ac, precision, recall, F1
+    flag = TP/(np.sum(pre_result) + np.sum(mask) - TP)
+
+    return TP, FP, TN, FN, ac, precision, recall, F1, flag
 
 
 
@@ -92,21 +95,26 @@ def main():
     #
     #载入模型
     model = creat_my_model()
-    weight_path = '../log/source_v1/my_model.h5'
+    weight_path = '../log/20191212-121627/my_model.h5'
     model.load_weights(weight_path)
-
+    correct = 0
     count = 0
+    start = 4000
+    end = 5000
+    step = 1
     TP, FP, TN, FN, accuracy, precision, recall, F1 = 0, 0, 0, 0, 0, 0, 0, 0
+
+    TP_c, FP_c, TN_c, FN_c, accuracy_c, precision_c, recall_c, F1_c = 0, 0, 0, 0, 0, 0, 0, 0
     # 单张图片预测
-    for source, mask in zip(x_list[4000::25], y_list[4000::25]):
+    for source, mask in zip(x_list[start:end:step], y_list[start:end:step]):
         img = Image.open(source).convert('RGB').resize([256, 256])
         #执行预测
         pre_result = model.predict(np.array(img).reshape([1, 256, 256, 3])/255.0)
-        if True:
+        if False:
             show_result(pre_result, mask, source)
 
         #开始进行评价
-        tp, fp, tn, fn, ac, pre, rc, f1 = eval_protcal(pre_result, mask)
+        tp, fp, tn, fn, ac, pre, rc, f1, flag = eval_protcal(pre_result, mask)
 
         TP += tp
         FP += fp
@@ -117,6 +125,16 @@ def main():
         recall += rc
         F1 += f1
         count += 1
+        if flag >= 0.5 :
+            TP_c += tp
+            FP_c += fp
+            TN_c += tn
+            FN_c += fn
+            accuracy_c += ac
+            precision_c += pre
+            recall_c += rc
+            F1_c += f1
+            correct += 1
 
     #输出评价结果
     print('protocal A: ac:{} precision:{} recall:{} F1:{}'.
@@ -125,7 +143,13 @@ def main():
     print('protocal B: ac:{} precision:{} recall:{} F1:{}'.
           format(accuracy / count, precision / count, recall / count, F1 / count))
 
+    print('\ncorrect:{}'.format(correct))
+    print('protocal correct A: ac:{} precision:{} recall:{} F1:{}'.
+          format((TP_c + TN_c) / (TP_c + TN_c + FP_c + FN_c), TP_c / (TP_c + FP_c),
+                 TP_c / (TP_c + FN_c), 2 * TP_c / (2 * TP_c + FP_c + FN_c)))
 
+    print('protocal correct B: ac:{} precision:{} recall:{} F1:{}'.
+          format(accuracy_c / correct, precision_c / correct, recall_c / correct, F1_c / correct))
 
 if __name__ == "__main__":
     main()
