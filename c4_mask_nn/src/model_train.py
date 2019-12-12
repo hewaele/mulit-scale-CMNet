@@ -17,7 +17,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 image_size = 256
 #load data
 image_path = '../data/CoMoFoD_small'
-log = '../log/' + time.strftime('%Y%m%d-%H%M%S')
+log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v2'
 
 #定义tensorboard回调可视化
 TBCallback = TensorBoard(log_dir=log)
@@ -57,4 +57,4 @@ my_model.fit(tfdata_xy,
              epochs=50,
              callbacks=[TBCallback])
 
-my_model.save(os.path.join(log, 'my_model.h5'))
+my_model.save(os.path.join(log, 'my_model_v2.h5'))

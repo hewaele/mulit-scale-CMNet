@@ -159,16 +159,20 @@ def creat_my_model(img_shape=[256, 256, 3], name='my', train=True):
     x4 = keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name=bname + '_b4p')(x4)
 
     #将x2 x3 经过卷积成为16X16  x2 64X64 to 16X16   x3 32X32 to 16X16
-
+    x2 = keras.layers.Conv2D(512, (7, 7), activation='relu', padding='same', strides=4, name=bname + 'x2to16')(x2)
+    x3 = keras.layers.Conv2D(512, (5, 5), activation='relu', padding='same', strides=2, name=bname + 'x3to16')(x3)
     # Local Std-Norm Normalization (within each sample)
-    xx = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn')(x4)
+    xx4 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn4')(x4)
+    xx2 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn2')(x2)
+    xx3 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn3')(x3)
+    xx = keras.layers.concatenate([xx2, xx3, xx4], name=bname + '_sn')
     # ---------------------------------------------------------
     # Self Correlation Pooling
     # ---------------------------------------------------------
     bname = name + '_corr'
     ## Self Correlation
 
-    xcorr = SelfCorrelationPercPooling(name=bname + '_corr')(xx)
+    xcorr = SelfCorrelationPercPooling(name=bname + '_corr', nb_pools=512)(xx)
 
     ## Global Batch Normalization (across samples)
     xn = keras.layers.BatchNormalization(name=bname + '_bn')(xcorr)
@@ -209,30 +213,3 @@ def creat_my_model(img_shape=[256, 256, 3], name='my', train=True):
     # ---------------------------------------------------------
     model = keras.Model(inputs=img_input, outputs=pred_mask, name=name)
     return model
-
-if __name__ == "__main__":
-    from data_preprocess import filter_image, image_preprocess
-
-    #load data
-    image_path = '../data/CoMoFoD_small'
-    log = '../log/' + time.strftime('%Y%m%d-%H%M%S')
-    my_model = creat_my_model([256, 256, 3], 'my')
-    print(my_model.input)
-    print(my_model.output)
-    my_model.summary()
-
-    #定义tensorboard回调可视化
-    TBCallback = TensorBoard(log_dir=log)
-    x_list, y_list = filter_image(image_path)
-    x, y = image_preprocess(image_path, x_list[:200], y_list[:200])
-
-    my_model.compile(optimizer=keras.optimizers.Adam(0.001),
-                     loss=keras.losses.binary_crossentropy,
-                     metrics=['accuracy'])
-    my_model.fit(x, y,
-                 batch_size=2,
-                 epochs=50,
-                 # validation_split=0.2,
-                 shuffle=True,
-                 callbacks=[TBCallback])
-    my_model.save(os.path.join(log, 'my_model.h5'))
