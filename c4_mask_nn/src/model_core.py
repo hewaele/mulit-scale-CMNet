@@ -224,14 +224,14 @@ if __name__ == "__main__":
     #定义tensorboard回调可视化
     TBCallback = TensorBoard(log_dir=log)
     x_list, y_list = filter_image(image_path)
-    x, y = image_preprocess(image_path, x_list, y_list)
+    x, y = image_preprocess(image_path, x_list[:200], y_list[:200])
 
     my_model.compile(optimizer=keras.optimizers.Adam(0.001),
                      loss=keras.losses.binary_crossentropy,
                      metrics=['accuracy'])
     my_model.fit(x, y,
                  batch_size=2,
-                 epochs=1,
+                 epochs=10,
                  # validation_split=0.2,
                  shuffle=True,
                  callbacks=[TBCallback])

@@ -44,9 +44,15 @@ def load_and_prepro_image(image, c, new_size):
         img = tf.image.decode_jpeg(img, channels=c)
     else:
         img = tf.image.decode_png(img, channels=c)
-    img = tf.image.convert_image_dtype(img, dtype=tf.float32)
+
+    #不可以调换resize 和 convert的位置，否则，程序有bug
     img = tf.image.resize_images(img, [new_size, new_size])
+    # img = tf.image.convert_image_dtype(img, dtype=tf.float32)
     img /= 255.0
+    #判断是否进行标签转换
+    if c == 1:
+        img = tf.round(img)
+
     return img
 
 #创建tf dataset
@@ -77,7 +83,32 @@ if __name__ == "__main__":
     #         # if y_element.shape[-1] == 4:
     #         #     print(i)
     '''
-    for ei in tf_data_x.take(4):
-        plt.imshow(ei[0])
+    #
+    # img = tf.read_file(train_x[0])
+    # img = tf.image.decode_png(img, 1)
+    # img = tf.image.resize_images(img, [256, 256])
+    # img = tf.image.convert_image_dtype(img, dtype=tf.float32)
+    # print(img)
+    # img /= 255.0
+    # print(tf.round(img))
+    # img = tf.reshape(img, [-1, 256, 256, 3])
+    for ei in tf_data_y.take(4):
+        print(np.sum(ei))
+        plt.imshow(np.array(ei).reshape([512, 512]))
         plt.show()
+
+    for ei in train_x[:4]:
+        img = tf.read_file(ei)
+        img = tf.image.decode_jpeg(img, channels=3)
+
+        # 不可以调换resize 和 convert的位置，否则，程序有bug
+        img = tf.image.resize_images(img, [512, 512])
+        # img = tf.image.convert_image_dtype(img, dtype=tf.float32)
+        img /= 255.0
+        # 判断是否进行标签转换
+        if 0:
+            img = tf.round(img)
+
+        print(np.sum(img))
+
 

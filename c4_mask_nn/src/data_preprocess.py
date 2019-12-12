@@ -41,6 +41,7 @@ def image_preprocess(image_path, train_x, train_y):
     for img in train_y[:1000]:
         img = Image.open(os.path.join(image_path, img)).convert('L').resize([256, 256])
         mask.append(np.array(img)/255)
+
     x = np.array(train).reshape([-1, 256, 256, 3])
     y = np.array(mask).reshape([-1, 256, 256, 1])
     return x, y

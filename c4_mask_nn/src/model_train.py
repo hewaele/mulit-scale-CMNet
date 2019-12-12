@@ -5,39 +5,60 @@ import os
 from model_core import creat_my_model
 from tensorflow.keras.callbacks import TensorBoard
 from tf_dataset import creat_tfdata, filter_image
+import numpy as np
+import matplotlib.pyplot as plt
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 #屏蔽警告
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+# tf.enable_eager_execution()
+
 
 image_size = 256
 #load data
 image_path = '../data/CoMoFoD_small'
 log = '../log/' + time.strftime('%Y%m%d-%H%M%S')
-my_model = creat_my_model([image_size, image_size, 3], 'my')
-print(my_model.input)
-print(my_model.output)
-my_model.summary()
 
 #定义tensorboard回调可视化
 TBCallback = TensorBoard(log_dir=log)
 x_list, y_list = filter_image(image_path)
-tfdata_x = creat_tfdata(x_list, 3, image_size)
-tfdata_y = creat_tfdata(y_list, 1, image_size)
+tfdata_x = creat_tfdata(x_list[:1000], 3, image_size)
+tfdata_y = creat_tfdata(y_list[:1000], 1, image_size)
 
 tfdata_xy = tf.data.Dataset.zip((tfdata_x, tfdata_y))
-tfdata_xy = tfdata_xy.shuffle(buffer_size=5000)
+tfdata_xy = tfdata_xy.shuffle(buffer_size=200)
 tfdata_xy = tfdata_xy.repeat()
-tfdata_xy = tfdata_xy.batch(32)
-tfdata_xy = tfdata_xy.prefetch(buffer_size=tf.contrib.data.AUTOTUNE)
+tfdata_xy = tfdata_xy.batch(1)
+# tfdata_xy = tfdata_xy.prefetch(buffer_size=tf.contrib.data.AUTOTUNE)
+
+def show_xy(x, y):
+    plt.figure()
+    plt.subplot(121)
+    x = np.array(x)
+    plt.imshow(x.reshape((256, 256, 3)))
+    y = np.array(y)
+    plt.subplot(122)
+    plt.imshow(y.reshape([256, 256]))
+    plt.show()
+
+# for i, j in tfdata_xy.take(1):
+#     # show_xy(i, j)
+#     print(i.shape)
+#     print(np.sum(np.round(j)))
+my_model = creat_my_model([image_size, image_size, 3], 'my')
+print(my_model.input)
+print(my_model.output)
+my_model.summary()
 my_model.compile(optimizer=keras.optimizers.Adam(0.001),
                  loss=keras.losses.binary_crossentropy,
                  metrics=['accuracy'])
 my_model.fit(tfdata_xy,
              steps_per_epoch=200,
-             epochs=10,
+             epochs=2,
              # validation_split=0.2,
-             shuffle=True,
+             shuffle=False,
              callbacks=[TBCallback])
+
+# pre = my_model.predict(tfdata_xy, steps=10)
+# print(pre)
 my_model.save(os.path.join(log, 'my_model.h5'))
-import tensorflow
