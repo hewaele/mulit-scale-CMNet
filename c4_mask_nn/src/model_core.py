@@ -231,7 +231,7 @@ if __name__ == "__main__":
                      metrics=['accuracy'])
     my_model.fit(x, y,
                  batch_size=2,
-                 epochs=10,
+                 epochs=50,
                  # validation_split=0.2,
                  shuffle=True,
                  callbacks=[TBCallback])
