@@ -76,7 +76,7 @@ def BnInception(x, nb_inc=16, inc_filt_list=[(1,1), (3,3), (5,5)], name='uinc') 
     for idx, ftuple in enumerate(inc_filt_list ) :
         uc = keras.layers.Conv2D( nb_inc, ftuple, activation='linear', padding='same', name=name+'_c%d' % idx)(x)
         uc_list.append(uc)
-    if ( len( uc_list ) > 1 ) :
+    if ( len( uc_list ) > 1 ):
         uc_merge = keras.layers.Concatenate( axis=-1, name=name+'_merge')(uc_list)
     else :
         uc_merge = uc_list[0]
@@ -158,38 +158,41 @@ def creat_my_model(img_shape=[256, 256, 3], name='my', train=True):
     x4 = keras.layers.Conv2D(512, (3, 3), activation='relu', padding='same', name=bname + '_b4c3')(x4)
     x4 = keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name=bname + '_b4p')(x4)
 
-    #将x2 x3 经过卷积成为16X16  x2 64X64 to 16X16   x3 32X32 to 16X16
-    x2 = keras.layers.Conv2D(512, (7, 7), activation='relu', padding='same', strides=4, name=bname + 'x2to16')(x2)
-    x3 = keras.layers.Conv2D(512, (5, 5), activation='relu', padding='same', strides=2, name=bname + 'x3to16')(x3)
     # Local Std-Norm Normalization (within each sample)
     xx4 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn4')(x4)
     xx2 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn2')(x2)
     xx3 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn3')(x3)
-    xx = keras.layers.concatenate([xx2, xx3, xx4], name=bname + '_sn')
+    # xx = keras.layers.concatenate([xx2, xx3, xx4], name=bname + '_sn')
     # ---------------------------------------------------------
     # Self Correlation Pooling
     # ---------------------------------------------------------
     bname = name + '_corr'
     ## Self Correlation
 
-    xcorr = SelfCorrelationPercPooling(name=bname + '_corr', nb_pools=512)(xx)
+    xcorr4 = SelfCorrelationPercPooling(name=bname + '_corr', nb_pools=256)(xx4)
 
+    #将x2 x3计算自相关
+    xcorr3 = SelfCorrelationPercPooling(name=bname + '_corr3', nb_pools=256)(xx3)
+    xcorr2 = SelfCorrelationPercPooling(name=bname + '_corr2', nb_pools=128)(xx2)
     ## Global Batch Normalization (across samples)
-    xn = keras.layers.BatchNormalization(name=bname + '_bn')(xcorr)
+    xn4 = keras.layers.BatchNormalization(name=bname + '_bn4')(xcorr4)
+    xn3 = keras.layers.BatchNormalization(name=bname + '_bn3')(xcorr3)
+    xn2 = keras.layers.BatchNormalization(name=bname + '_bn2')(xcorr2)
     # ---------------------------------------------------------
     # Deconvolution Network
     # ---------------------------------------------------------
     patch_list = [(1, 1), (3, 3), (5, 5)]
     # MultiPatch Featex
     bname = name + '_dconv'
-    f16 = BnInception(xn, 8, patch_list, name=bname + '_mpf')
+    f16 = BnInception(xn4, 8, patch_list, name=bname + '_mpf')
     # Deconv x2
     f32 = BilinearUpSampling2D(name=bname + '_bx2')(f16)
+    f32 = keras.layers.Concatenate(axis=-1, name=name + '_dx2_m')([f32, xn3])
     dx32 = BnInception(f32, 6, patch_list, name=bname + '_dx2')
     # Deconv x4
     f64a = BilinearUpSampling2D(name=bname + '_bx4a')(f32)
     f64b = BilinearUpSampling2D(name=bname + '_bx4b')(dx32)
-    f64 = keras.layers.Concatenate(axis=-1, name=name + '_dx4_m')([f64a, f64b])
+    f64 = keras.layers.Concatenate(axis=-1, name=name + '_dx4_m')([f64a, f64b, xn2])
     dx64 = BnInception(f64, 4, patch_list, name=bname + '_dx4')
     # Deconv x8
     f128a = BilinearUpSampling2D(name=bname + '_bx8a')(f64a)
