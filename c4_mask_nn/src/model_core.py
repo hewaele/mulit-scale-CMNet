@@ -172,8 +172,8 @@ def creat_my_model(img_shape=[256, 256, 3], name='my', train=True):
     xcorr4 = SelfCorrelationPercPooling(name=bname + '_corr', nb_pools=256)(xx4)
 
     #将x2 x3计算自相关
-    xcorr3 = SelfCorrelationPercPooling(name=bname + '_corr3', nb_pools=256)(xx3)
-    xcorr2 = SelfCorrelationPercPooling(name=bname + '_corr2', nb_pools=128)(xx2)
+    xcorr3 = SelfCorrelationPercPooling(name=bname + '_corr3', nb_pools=8)(xx3)
+    xcorr2 = SelfCorrelationPercPooling(name=bname + '_corr2', nb_pools=6)(xx2)
     ## Global Batch Normalization (across samples)
     xn4 = keras.layers.BatchNormalization(name=bname + '_bn4')(xcorr4)
     xn3 = keras.layers.BatchNormalization(name=bname + '_bn3')(xcorr3)

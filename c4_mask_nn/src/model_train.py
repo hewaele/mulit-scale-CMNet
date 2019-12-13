@@ -18,7 +18,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 image_size = 256
 #load data
 image_path = '../data/CoMoFoD_small'
-log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v2'
+log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v3'
 
 #定义tensorboard回调可视化
 TBCallback = TensorBoard(log_dir=log)
@@ -31,7 +31,7 @@ x_list, y_list = get_casiadataset(target_path, mask_path)
 tfdata_x = creat_tfdata(x_list[:], 3, image_size)
 tfdata_y = creat_tfdata(y_list[:], 1, image_size)
 batchs = 2
-epochs = 500
+epochs = 200
 tfdata_xy = tf.data.Dataset.zip((tfdata_x, tfdata_y))
 tfdata_xy = tfdata_xy.shuffle(buffer_size=len(x_list))
 tfdata_xy = tfdata_xy.repeat(epochs+1)
