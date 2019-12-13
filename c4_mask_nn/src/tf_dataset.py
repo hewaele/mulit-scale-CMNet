@@ -45,7 +45,9 @@ def load_and_prepro_image(image, c, new_size):
     else:
         img = tf.image.decode_png(img, channels=c)
 
+    #TODO 添加图片处理，比如裁剪 翻转 旋转，噪声 以此增加样本
     #不可以调换resize 和 convert的位置，否则，程序有bug
+    # tf.image.resize_image_with_crop_or_pad()
     img = tf.image.resize_images(img, [new_size, new_size])
     # img = tf.image.convert_image_dtype(img, dtype=tf.float32)
     img /= 255.0

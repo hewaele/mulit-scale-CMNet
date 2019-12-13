@@ -8,7 +8,7 @@ import os
 import sys
 from model_core import creat_my_model
 from tf_dataset import filter_image, load_and_prepro_image
-
+from casia_data_process import get_casiadataset
 
 def pre2img(result, channel=1):
     """
@@ -92,16 +92,20 @@ def main():
     # #载入数据
     image_path = '../data/CoMoFoD_small/'
     x_list, y_list = filter_image(image_path)
+    #测试casia数据
+    # target_path = '../data/casia-dataset/target'
+    # mask_path = '../data/casia-dataset/mask'
+    # x_list, y_list = get_casiadataset(target_path, mask_path)
     #
     #载入模型
     model = creat_my_model()
-    weight_path = '../log/20191212-121627/my_model.h5'
+    weight_path = '../log/20191212-183929_v2/my_model.h5'
     model.load_weights(weight_path)
     correct = 0
     count = 0
-    start = 4000
+    start = 0
     end = 5000
-    step = 1
+    step = 25
     TP, FP, TN, FN, accuracy, precision, recall, F1 = 0, 0, 0, 0, 0, 0, 0, 0
 
     TP_c, FP_c, TN_c, FN_c, accuracy_c, precision_c, recall_c, F1_c = 0, 0, 0, 0, 0, 0, 0, 0
@@ -110,7 +114,7 @@ def main():
         img = Image.open(source).convert('RGB').resize([256, 256])
         #执行预测
         pre_result = model.predict(np.array(img).reshape([1, 256, 256, 3])/255.0)
-        if False:
+        if True:
             show_result(pre_result, mask, source)
 
         #开始进行评价
@@ -126,6 +130,7 @@ def main():
         F1 += f1
         count += 1
         if flag >= 0.5 :
+            print(count)
             TP_c += tp
             FP_c += fp
             TN_c += tn
