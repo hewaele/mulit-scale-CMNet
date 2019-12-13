@@ -10,14 +10,16 @@ from model_core import creat_my_model
 from tf_dataset import filter_image, load_and_prepro_image
 from casia_data_process import get_casiadataset
 
+
+image_size = 512
 def pre2img(result, channel=1):
     """
     将预测结果转换为图片显示
     :param result:numpy shape[-1, 256, 256, 1]
     :return:
     """
-    result = np.reshape(result, [256, 256])
-    result = result * 255
+    result = np.reshape(result, [image_size, image_size])
+    result = result * image_size
     result = result.astype(np.uint8)
     # print(type(result))
     img = Image.fromarray(result)
@@ -32,13 +34,13 @@ def img2pre(img, channel = 3):
     """
     img = Image.open(img)
     if channel == 3:
-        img = img.convert('RGB').resize([256, 256])
+        img = img.convert('RGB').resize([image_size, image_size])
 
     else:
         channel = 1
-        img = img.convert('L').resize([256, 256])
+        img = img.convert('L').resize([image_size, image_size])
     img = np.array(img)/255.0
-    return img.reshape([1, 256, 256, channel])
+    return img.reshape([1, image_size, image_size, channel])
 
 
 def show_result(pre_result, mask, source):
@@ -50,20 +52,20 @@ def show_result(pre_result, mask, source):
         plt.imshow(pre_result)
     if mask is not None:
         plt.subplot(132)
-        mask = Image.open(mask).convert('L').resize([256, 256])
+        mask = Image.open(mask).convert('L').resize([image_size, image_size])
         plt.imshow(mask)
     if source is not None:
         plt.subplot(133)
-        source = Image.open(source).convert('RGB').resize([256, 256])
+        source = Image.open(source).convert('RGB').resize([image_size, image_size])
         plt.imshow(source)
     plt.show()
 
 
 def eval_protcal(pre_result, mask):
     #现将预测结果01化
-    pre_result = np.round(pre_result).reshape([256, 256])
-    mask = Image.open(mask).convert('L').resize([256, 256])
-    mask = np.array(mask).reshape([256, 256])/255.0
+    pre_result = np.round(pre_result).reshape([image_size, image_size])
+    mask = Image.open(mask).convert('L').resize([image_size, image_size])
+    mask = np.array(mask).reshape([image_size, image_size])/255.0
     mask = np.round(mask)
 
     #两种评价方式，一种计算整体，一种计算单张
@@ -71,7 +73,7 @@ def eval_protcal(pre_result, mask):
     FP = np.sum(pre_result) - TP
 
     TN = np.sum(np.logical_and(np.logical_not(pre_result), np.logical_not(mask)).astype(np.uint8))
-    FN = 256*256 - TP - FP - TN
+    FN = image_size**2 - TP - FP - TN
 
     #计算precision, recall, F1
     ac = (TP+TN)/(TP+FP+TN+FN)
@@ -98,7 +100,7 @@ def main():
     # x_list, y_list = get_casiadataset(target_path, mask_path)
     #
     #载入模型
-    model = creat_my_model()
+    model = creat_my_model([image_size, image_size, 3])
     weight_path = '../log/20191212-183929_v2/my_model.h5'
     model.load_weights(weight_path)
     correct = 0
@@ -111,9 +113,9 @@ def main():
     TP_c, FP_c, TN_c, FN_c, accuracy_c, precision_c, recall_c, F1_c = 0, 0, 0, 0, 0, 0, 0, 0
     # 单张图片预测
     for source, mask in zip(x_list[start:end:step], y_list[start:end:step]):
-        img = Image.open(source).convert('RGB').resize([256, 256])
+        img = Image.open(source).convert('RGB').resize([image_size, image_size])
         #执行预测
-        pre_result = model.predict(np.array(img).reshape([1, 256, 256, 3])/255.0)
+        pre_result = model.predict(np.array(img).reshape([1, image_size, image_size, 3])/255.0)
         if True:
             show_result(pre_result, mask, source)
 
