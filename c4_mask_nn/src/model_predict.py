@@ -123,7 +123,7 @@ def main():
         #执行预测
         pre_result = model.predict(np.array(img).reshape([1, image_size, image_size, 3])/255.0)
         pre_result -= threshold
-        if True:
+        if False:
             show_result(pre_result, mask, source)
 
         #开始进行评价
@@ -138,7 +138,7 @@ def main():
         recall += rc
         F1 += f1
         count += 1
-        if flag >= 0.5:
+        if f1 >= 0.5:
             print(count)
             TP_c += tp
             FP_c += fp
