@@ -11,15 +11,16 @@ from tf_dataset import filter_image, load_and_prepro_image
 from casia_data_process import get_casiadataset
 
 
-image_size = 512
+image_size = 256
 def pre2img(result, channel=1):
     """
     将预测结果转换为图片显示
     :param result:numpy shape[-1, 256, 256, 1]
     :return:
     """
+    result = np.round(result)
     result = np.reshape(result, [image_size, image_size])
-    result = result * image_size
+    result = result * 255
     result = result.astype(np.uint8)
     # print(type(result))
     img = Image.fromarray(result)
@@ -76,14 +77,17 @@ def eval_protcal(pre_result, mask):
     FN = image_size**2 - TP - FP - TN
 
     #计算precision, recall, F1
-    ac = (TP+TN)/(TP+FP+TN+FN)
-    precision = TP/(TP+FP)
-    recall = TP/(TP+FN)
-    F1 = 2*TP/(2*TP+FP+FN)
+    ac = (TP+TN)/(TP+FP+TN+FN+0.000001)
+    precision = TP/(TP+FP+0.0000001)
+    recall = TP/(TP+FN+0.0000001)
+    F1 = 2*TP/(2*TP+FP+FN+0.000001)
 
     flag = TP/(np.sum(pre_result) + np.sum(mask) - TP)
 
     return TP, FP, TN, FN, ac, precision, recall, F1, flag
+
+def threshold_process(pre_result, threshold):
+    shape = pre_result.shape
 
 
 
@@ -98,24 +102,27 @@ def main():
     # target_path = '../data/casia-dataset/target'
     # mask_path = '../data/casia-dataset/mask'
     # x_list, y_list = get_casiadataset(target_path, mask_path)
-    #
+
     #载入模型
     model = creat_my_model([image_size, image_size, 3])
-    weight_path = '../log/20191212-183929_v2/my_model.h5'
+    weight_path = '../log/20191213-184534_v3/my_model.h5'
     model.load_weights(weight_path)
     correct = 0
     count = 0
     start = 0
     end = 5000
     step = 25
+    threshold = 0.
     TP, FP, TN, FN, accuracy, precision, recall, F1 = 0, 0, 0, 0, 0, 0, 0, 0
 
     TP_c, FP_c, TN_c, FN_c, accuracy_c, precision_c, recall_c, F1_c = 0, 0, 0, 0, 0, 0, 0, 0
     # 单张图片预测
+    statr_time = time.time()
     for source, mask in zip(x_list[start:end:step], y_list[start:end:step]):
         img = Image.open(source).convert('RGB').resize([image_size, image_size])
         #执行预测
         pre_result = model.predict(np.array(img).reshape([1, image_size, image_size, 3])/255.0)
+        pre_result -= threshold
         if True:
             show_result(pre_result, mask, source)
 
@@ -131,7 +138,7 @@ def main():
         recall += rc
         F1 += f1
         count += 1
-        if flag >= 0.5 :
+        if flag >= 0.5:
             print(count)
             TP_c += tp
             FP_c += fp
@@ -143,6 +150,8 @@ def main():
             F1_c += f1
             correct += 1
 
+    end_time = time.time()
+    print("consume time:{} process time per img:{}".format(end_time - statr_time, (end_time-statr_time)/count))
     #输出评价结果
     print('protocal A: ac:{} precision:{} recall:{} F1:{}'.
           format((TP + TN) / (TP + TN + FP + FN), TP / (TP + FP), TP / (TP + FN), 2 * TP / (2 * TP + FP + FN)))

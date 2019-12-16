@@ -15,7 +15,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 # tf.enable_eager_execution()
 
 
-image_size = 512
+image_size = 256
 #load data
 image_path = '../data/CoMoFoD_small'
 log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v3/'
@@ -30,7 +30,7 @@ x_list, y_list = get_casiadataset(target_path, mask_path)
 tfdata_x = creat_tfdata(x_list[:], 3, image_size)
 tfdata_y = creat_tfdata(y_list[:], 1, image_size)
 batchs = 2
-epochs = 100
+epochs = 200
 tfdata_xy = tf.data.Dataset.zip((tfdata_x, tfdata_y))
 tfdata_xy = tfdata_xy.shuffle(buffer_size=len(x_list))
 tfdata_xy = tfdata_xy.repeat(epochs+1)
@@ -57,12 +57,12 @@ my_model = creat_my_model([image_size, image_size, 3], 'my')
 print(my_model.input)
 print(my_model.output)
 my_model.summary()
-my_model.compile(optimizer=keras.optimizers.Adam(0.001),
+my_model.compile(optimizer=keras.optimizers.Adam(0.0001),
                  loss=keras.losses.binary_crossentropy,
                  metrics=['accuracy'])
 my_model.fit(tfdata_xy,
              steps_per_epoch=len(x_list)//batchs,
              epochs=epochs,
-             callbacks=[TBCallback])
+             callbacks=[TBCallback, cpCallback])
 
 my_model.save(os.path.join(log, 'my_model.h5'))
