@@ -61,6 +61,7 @@ def load_and_prepro_image(image, c, new_size):
 def creat_tfdata(images_path, c, new_size):
     tf_data = tf.data.Dataset.from_tensor_slices(images_path)
     #映射动态生成数据集
+    #TODO 在这里添加一个随机数， 用于获取各种变换的参数
     tf_data = tf_data.map(lambda x: load_and_prepro_image(x, c, new_size))
 
     return tf_data

@@ -19,10 +19,15 @@ image_size = 256
 #load data
 image_path = '../data/CoMoFoD_small'
 log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v3/'
-
+pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
 
 #单独训练comofod数据集
-# x_list, y_list = filter_image(image_path)
+x_list, y_list = filter_image(image_path)
+#创建测试训练集
+test_x = creat_tfdata(x_list, 3, image_size)
+test_y = creat_tfdata(y_list, 1, image_size)
+test_xy = tf.data.Dataset.zip((test_x, test_y)).repeat().batch(2)
+
 #训练casia数据集，测试comofod数据集
 target_path = '../data/casia-dataset/target'
 mask_path = '../data/casia-dataset/mask'
@@ -53,16 +58,19 @@ def show_xy(x, y):
 #定义tensorboard回调可视化
 TBCallback = TensorBoard(log_dir=log)
 cpCallback = keras.callbacks.ModelCheckpoint(filepath=os.path.join(log, 'weight_{epoch:04d}.ckpt'), period=5)
-my_model = creat_my_model([image_size, image_size, 3], 'my')
+my_model = creat_my_model([image_size, image_size, 3], pre_weight_path)
 print(my_model.input)
 print(my_model.output)
 my_model.summary()
-my_model.compile(optimizer=keras.optimizers.Adam(0.0001),
+my_model.compile(optimizer=keras.optimizers.Adam(0.0015),
                  loss=keras.losses.binary_crossentropy,
                  metrics=['accuracy'])
+
 my_model.fit(tfdata_xy,
              steps_per_epoch=len(x_list)//batchs,
              epochs=epochs,
+             validation_data=test_xy,
+             validation_steps=100,
              callbacks=[TBCallback, cpCallback])
 
 my_model.save(os.path.join(log, 'my_model.h5'))

@@ -38,12 +38,12 @@ class SelfCorrelationPercPooling( keras.layers.Layer ) :
         nb_maps = nb_rows * nb_cols
         # self correlation
         #计算自相关系数
-        x_3d = keras.backend.reshape( x, tf.stack( [ -1, nb_maps, nb_feats ] ) )
+        x_3d = keras.backend.reshape(x, tf.stack( [ -1, nb_maps, nb_feats ] ) )
         x_corr_3d = tf.matmul( x_3d, x_3d, transpose_a = False, transpose_b = True ) / nb_feats
         x_corr = keras.backend.reshape( x_corr_3d, tf.stack( [ -1, nb_rows, nb_cols, nb_maps ] ) )
         # argsort response maps along the translaton dimension
-        if ( self.nb_pools is not None ) :
-            ranks = keras.backend.cast( keras.backend.round( tf.lin_space( 1., nb_maps - 1, self.nb_pools ) ), 'int32' )
+        if (self.nb_pools is not None ):
+            ranks = keras.backend.cast( keras.backend.round(tf.lin_space(1., nb_maps - 1, self.nb_pools)), 'int32')
         else:
             ranks = tf.range(1, nb_maps, dtype = 'int32' )
         #排序相关系数 并选择，这里选择所有的结果
@@ -126,7 +126,76 @@ def mrcnn_mask_loss_graph(target_masks, pred_masks):
     loss = keras.backend.mean(loss)
     return loss
 
-def creat_my_model(img_shape=[256, 256, 3], name='my', train=True):
+def creat_backbone(input_shape=None, weights=None):
+
+    img_input = tf.keras.layers.Input(shape=input_shape)
+
+    # Block 1
+    x = tf.keras.layers.Conv2D(
+        64, (3, 3), activation='relu', padding='same', name='block1_conv1', trainable=False)(
+        img_input)
+    x = tf.keras.layers.Conv2D(
+        64, (3, 3), activation='relu', padding='same', name='block1_conv2', trainable=False)(
+        x)
+    x = tf.keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name='block1_pool')(x)
+
+    # Block 2
+    x2 = tf.keras.layers.Conv2D(
+        128, (3, 3), activation='relu', padding='same', name='block2_conv1', trainable=False)(
+        x)
+    x2 = tf.keras.layers.Conv2D(
+        128, (3, 3), activation='relu', padding='same', name='block2_conv2', trainable=False)(
+        x2)
+    x2 = tf.keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name='block2_pool')(x2)
+
+    # Block 3
+    x3 = tf.keras.layers.Conv2D(
+        256, (3, 3), activation='relu', padding='same', name='block3_conv1', trainable=False)(
+        x2)
+    x3 = tf.keras.layers.Conv2D(
+        256, (3, 3), activation='relu', padding='same', name='block3_conv2', trainable=False)(
+        x3)
+    x3 = tf.keras.layers.Conv2D(
+        256, (3, 3), activation='relu', padding='same', name='block3_conv3', trainable=False)(
+        x3)
+    x3 = tf.keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name='block3_pool')(x3)
+
+    # Block 4
+    x4 = tf.keras.layers.Conv2D(
+        512, (3, 3), activation='relu', padding='same', name='block4_conv1', trainable=False)(
+        x3)
+    x4 = tf.keras.layers.Conv2D(
+        512, (3, 3), activation='relu', padding='same', name='block4_conv2', trainable=False)(
+        x4)
+    x4 = tf.keras.layers.Conv2D(
+        512, (3, 3), activation='relu', padding='same', name='block4_conv3', trainable=False)(
+        x4)
+    x4 = tf.keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name='block4_pool')(x4)
+
+    # Block 5
+    x5 = tf.keras.layers.Conv2D(
+        512, (3, 3), activation='relu', padding='same', name='block5_conv1')(
+        x4)
+    x5 = tf.keras.layers.Conv2D(
+        512, (3, 3), activation='relu', padding='same', name='block5_conv2')(
+        x5)
+    x5 = tf.keras.layers.Conv2D(
+        512, (3, 3), activation='relu', padding='same', name='block5_conv3')(
+        x5)
+    x5 = tf.keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(x5)
+
+    y = tf.keras.layers.GlobalMaxPooling2D()(x5)
+
+    # Ensure that the model takes into account
+    # any potential predecessors of `input_tensor`.
+    model = tf.keras.Model(img_input, [x2, x3, x4, y], name='vgg16')
+
+    if weights is not None:
+        model.load_weights(weights)
+
+    return model.input, model.output
+
+def creat_my_model(img_shape, pre_weight_path, name='my'):
 
     #定义特征提取网络
     '''Create the similarity branch for copy-move forgery detection
@@ -134,29 +203,12 @@ def creat_my_model(img_shape=[256, 256, 3], name='my', train=True):
     # ---------------------------------------------------------
     # Input
     # ---------------------------------------------------------
-    img_input = keras.Input(shape=img_shape, name=name + '_in')
+    img_input, xx = creat_backbone(img_shape, pre_weight_path)
+    x2 = xx[0]
+    x3 = xx[1]
+    x4 = xx[2]
     # ---------------------------------------------------------
-    # VGG16 Conv Featex
-    # ---------------------------------------------------------
-    bname = name + '_cnn'
-    ## Block 1
-    x1 = keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same', name=bname + '_b1c1')(img_input)
-    x1 = keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same', name=bname + '_b1c2')(x1)
-    x1 = keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name=bname + '_b1p')(x1)
-    # Block 2
-    x2 = keras.layers.Conv2D(128, (3, 3), activation='relu', padding='same', name=bname + '_b2c1')(x1)
-    x2 = keras.layers.Conv2D(128, (3, 3), activation='relu', padding='same', name=bname + '_b2c2')(x2)
-    x2 = keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name=bname + '_b2p')(x2)
-    # Block 3
-    x3 = keras.layers.Conv2D(256, (3, 3), activation='relu', padding='same', name=bname + '_b3c1')(x2)
-    x3 = keras.layers.Conv2D(256, (3, 3), activation='relu', padding='same', name=bname + '_b3c2')(x3)
-    x3 = keras.layers.Conv2D(256, (3, 3), activation='relu', padding='same', name=bname + '_b3c3')(x3)
-    x3 = keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name=bname + '_b3p')(x3)
-    # Block 4
-    x4 = keras.layers.Conv2D(512, (3, 3), activation='relu', padding='same', name=bname + '_b4c1')(x3)
-    x4 = keras.layers.Conv2D(512, (3, 3), activation='relu', padding='same', name=bname + '_b4c2')(x4)
-    x4 = keras.layers.Conv2D(512, (3, 3), activation='relu', padding='same', name=bname + '_b4c3')(x4)
-    x4 = keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name=bname + '_b4p')(x4)
+    bname = name
 
     # Local Std-Norm Normalization (within each sample)
     xx4 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn4')(x4)
@@ -169,14 +221,18 @@ def creat_my_model(img_shape=[256, 256, 3], name='my', train=True):
     bname = name + '_corr'
     ## Self Correlation
 
+    #TODO 蚕食修改nb——pools 参数 缩减参数 但前选择了一半
     xcorr4 = SelfCorrelationPercPooling(name=bname + '_corr', nb_pools=256)(xx4)
 
     #将x2 x3计算自相关
     xcorr3 = SelfCorrelationPercPooling(name=bname + '_corr3', nb_pools=8)(xx3)
     xcorr2 = SelfCorrelationPercPooling(name=bname + '_corr2', nb_pools=6)(xx2)
     ## Global Batch Normalization (across samples)
+    xcorr4 = keras.layers.Conv2D(256, (3, 3), padding='same', activation='relu', name=bname+"_cn4")(xcorr4)
     xn4 = keras.layers.BatchNormalization(name=bname + '_bn4')(xcorr4)
+    xcorr3 = keras.layers.Conv2D(8, (3, 3), padding='same', activation='relu', name=bname + "_cn3")(xcorr3)
     xn3 = keras.layers.BatchNormalization(name=bname + '_bn3')(xcorr3)
+    xcorr2 = keras.layers.Conv2D(6, (3, 3), padding='same', activation='relu', name=bname + "_cn2")(xcorr2)
     xn2 = keras.layers.BatchNormalization(name=bname + '_bn2')(xcorr2)
     # ---------------------------------------------------------
     # Deconvolution Network

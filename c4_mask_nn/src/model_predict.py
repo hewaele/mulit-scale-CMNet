@@ -99,18 +99,18 @@ def main():
     image_path = '../data/CoMoFoD_small/'
     x_list, y_list = filter_image(image_path)
     #测试casia数据
-    # target_path = '../data/casia-dataset/target'
-    # mask_path = '../data/casia-dataset/mask'
-    # x_list, y_list = get_casiadataset(target_path, mask_path)
+    target_path = '../data/casia-dataset/target'
+    mask_path = '../data/casia-dataset/mask'
+    x_list, y_list = get_casiadataset(target_path, mask_path)
 
     #载入模型
     model = creat_my_model([image_size, image_size, 3])
-    weight_path = '../log/20191213-184534_v3/my_model.h5'
+    weight_path = '../log/20191217-104359_v3/weight_0170.ckpt'
     model.load_weights(weight_path)
     correct = 0
     count = 0
     start = 0
-    end = 5000
+    end = 300
     step = 25
     threshold = 0.
     TP, FP, TN, FN, accuracy, precision, recall, F1 = 0, 0, 0, 0, 0, 0, 0, 0
@@ -123,7 +123,7 @@ def main():
         #执行预测
         pre_result = model.predict(np.array(img).reshape([1, image_size, image_size, 3])/255.0)
         pre_result -= threshold
-        if False:
+        if True:
             show_result(pre_result, mask, source)
 
         #开始进行评价
