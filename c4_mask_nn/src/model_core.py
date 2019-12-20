@@ -128,47 +128,48 @@ def mrcnn_mask_loss_graph(target_masks, pred_masks):
 
 def creat_backbone(input_shape=None, weights=None):
 
+    train = True
     img_input = tf.keras.layers.Input(shape=input_shape)
 
     # Block 1
     x = tf.keras.layers.Conv2D(
-        64, (3, 3), activation='relu', padding='same', name='block1_conv1', trainable=False)(
+        64, (3, 3), activation='relu', padding='same', name='block1_conv1', trainable=train)(
         img_input)
     x = tf.keras.layers.Conv2D(
-        64, (3, 3), activation='relu', padding='same', name='block1_conv2', trainable=False)(
+        64, (3, 3), activation='relu', padding='same', name='block1_conv2', trainable=train)(
         x)
     x = tf.keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name='block1_pool')(x)
 
     # Block 2
     x2 = tf.keras.layers.Conv2D(
-        128, (3, 3), activation='relu', padding='same', name='block2_conv1', trainable=False)(
+        128, (3, 3), activation='relu', padding='same', name='block2_conv1', trainable=train)(
         x)
     x2 = tf.keras.layers.Conv2D(
-        128, (3, 3), activation='relu', padding='same', name='block2_conv2', trainable=False)(
+        128, (3, 3), activation='relu', padding='same', name='block2_conv2', trainable=train)(
         x2)
     x2 = tf.keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name='block2_pool')(x2)
 
     # Block 3
     x3 = tf.keras.layers.Conv2D(
-        256, (3, 3), activation='relu', padding='same', name='block3_conv1', trainable=False)(
+        256, (3, 3), activation='relu', padding='same', name='block3_conv1', trainable=train)(
         x2)
     x3 = tf.keras.layers.Conv2D(
-        256, (3, 3), activation='relu', padding='same', name='block3_conv2', trainable=False)(
+        256, (3, 3), activation='relu', padding='same', name='block3_conv2', trainable=train)(
         x3)
     x3 = tf.keras.layers.Conv2D(
-        256, (3, 3), activation='relu', padding='same', name='block3_conv3', trainable=False)(
+        256, (3, 3), activation='relu', padding='same', name='block3_conv3', trainable=train)(
         x3)
     x3 = tf.keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name='block3_pool')(x3)
 
     # Block 4
     x4 = tf.keras.layers.Conv2D(
-        512, (3, 3), activation='relu', padding='same', name='block4_conv1', trainable=False)(
+        512, (3, 3), activation='relu', padding='same', name='block4_conv1', trainable=train)(
         x3)
     x4 = tf.keras.layers.Conv2D(
-        512, (3, 3), activation='relu', padding='same', name='block4_conv2', trainable=False)(
+        512, (3, 3), activation='relu', padding='same', name='block4_conv2', trainable=train)(
         x4)
     x4 = tf.keras.layers.Conv2D(
-        512, (3, 3), activation='relu', padding='same', name='block4_conv3', trainable=False)(
+        512, (3, 3), activation='relu', padding='same', name='block4_conv3', trainable=train)(
         x4)
     x4 = tf.keras.layers.MaxPooling2D((2, 2), strides=(2, 2), name='block4_pool')(x4)
 

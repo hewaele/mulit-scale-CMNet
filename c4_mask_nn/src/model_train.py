@@ -58,11 +58,12 @@ def show_xy(x, y):
 #定义tensorboard回调可视化
 TBCallback = TensorBoard(log_dir=log)
 cpCallback = keras.callbacks.ModelCheckpoint(filepath=os.path.join(log, 'weight_{epoch:04d}.ckpt'), period=5)
-my_model = creat_my_model([image_size, image_size, 3], pre_weight_path)
+my_model = creat_my_model([image_size, image_size, 3], pre_weight_path=None)
+my_model.load_weights('../log/20191218-185416_v3/weight_0400.ckpt')
 print(my_model.input)
 print(my_model.output)
 my_model.summary()
-my_model.compile(optimizer=keras.optimizers.Adam(0.0015),
+my_model.compile(optimizer=keras.optimizers.Adam(0.0001),
                  loss=keras.losses.binary_crossentropy,
                  metrics=['accuracy'])
 
