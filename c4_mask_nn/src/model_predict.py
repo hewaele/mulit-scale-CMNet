@@ -10,7 +10,7 @@ from model_core import creat_my_model
 from tf_dataset import filter_image, load_and_prepro_image
 from casia_data_process import get_casiadataset
 
-
+# tf.enable_eager_execution()
 image_size = 256
 def pre2img(result, channel=1):
     """
@@ -104,13 +104,14 @@ def main():
     # x_list, y_list = get_casiadataset(target_path, mask_path)
 
     #载入模型
-    model = creat_my_model([image_size, image_size, 3], pre_weight_path=None)
-    weight_path = '../log/20191219-134527_v3/weight_0135.ckpt'
-    model.load_weights(weight_path)
+    pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
+    model = creat_my_model([image_size, image_size, 3], pre_weight_path=None, mode='valid')
+    weight_path = '../log/20191227-144327_v6/weight_0010.ckpt'
+    # model.load_weights(weight_path)
     correct = 0
     count = 0
     start = 0
-    end = 5000
+    end = 200
     step = 25
     threshold = 0.
     TP, FP, TN, FN, accuracy, precision, recall, F1 = 0, 0, 0, 0, 0, 0, 0, 0
@@ -118,14 +119,18 @@ def main():
     TP_c, FP_c, TN_c, FN_c, accuracy_c, precision_c, recall_c, F1_c = 0, 0, 0, 0, 0, 0, 0, 0
     # 单张图片预测
     statr_time = time.time()
-    for source, mask in zip(x_list[start:end:step], y_list[start:end:step]):
+    for source, mask in zip(['./test2.png'], y_list[start:start+1:step]):
         img = Image.open(source).convert('RGB').resize([image_size, image_size])
         #执行预测
-        pre_result = model.predict(np.array(img).reshape([1, image_size, image_size, 3])/255.0)
+        pre_result, _ = model.predict(np.array(img).reshape([1, image_size, image_size, 3])/255.0)
         pre_result -= threshold
-        if False:
+        if True:
             show_result(pre_result, mask, source)
-
+        for i in _[0, :, :, 1]:
+            print('{}'.format(i))
+        plt.figure()
+        plt.imshow(_[0, :, :, 1])
+        plt.show()
         #开始进行评价
         tp, fp, tn, fn, ac, pre, rc, f1, flag = eval_protcal(pre_result, mask)
 

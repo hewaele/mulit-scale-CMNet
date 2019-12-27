@@ -14,11 +14,10 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 # tf.enable_eager_execution()
 
-
 image_size = 256
 #load data
 image_path = '../data/CoMoFoD_small'
-log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v3/'
+log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v6/'
 pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
 
 #单独训练comofod数据集
@@ -35,7 +34,7 @@ x_list, y_list = get_casiadataset(target_path, mask_path)
 tfdata_x = creat_tfdata(x_list[:], 3, image_size)
 tfdata_y = creat_tfdata(y_list[:], 1, image_size)
 batchs = 2
-epochs = 200
+epochs = 400
 tfdata_xy = tf.data.Dataset.zip((tfdata_x, tfdata_y))
 tfdata_xy = tfdata_xy.shuffle(buffer_size=len(x_list))
 tfdata_xy = tfdata_xy.repeat(epochs+1)
@@ -58,8 +57,8 @@ def show_xy(x, y):
 #定义tensorboard回调可视化
 TBCallback = TensorBoard(log_dir=log)
 cpCallback = keras.callbacks.ModelCheckpoint(filepath=os.path.join(log, 'weight_{epoch:04d}.ckpt'), period=5)
-my_model = creat_my_model([image_size, image_size, 3], pre_weight_path=None)
-my_model.load_weights('../log/20191218-185416_v3/weight_0400.ckpt')
+my_model = creat_my_model([image_size, image_size, 3], pre_weight_path=pre_weight_path)
+my_model.load_weights('../log/20191227-094236_v6/weight_0370.ckpt')
 print(my_model.input)
 print(my_model.output)
 my_model.summary()
@@ -72,6 +71,7 @@ my_model.fit(tfdata_xy,
              epochs=epochs,
              validation_data=test_xy,
              validation_steps=100,
-             callbacks=[TBCallback, cpCallback])
+             callbacks=[TBCallback, cpCallback],
+             )
 
 my_model.save(os.path.join(log, 'my_model.h5'))
