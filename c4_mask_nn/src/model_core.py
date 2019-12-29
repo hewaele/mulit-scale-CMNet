@@ -4,7 +4,7 @@ import numpy as np
 from tensorflow import keras
 import time
 from tensorflow.keras.callbacks import TensorBoard
-
+from resnet50_backbone import ResNet50
 
 def std_norm_along_chs(x):
     '''Data normalization along the channle axis
@@ -37,49 +37,49 @@ class SelfCorrelationPercPooling( keras.layers.Layer ) :
         bsize, nb_rows, nb_cols, nb_feats = keras.backend.int_shape(x)
         nb_maps = nb_rows * nb_cols
         #矩阵扩充
-        x_3d = keras.backend.reshape(x, tf.stack([-1, nb_maps, nb_feats]))
-        x_3d = tf.tile(x_3d, [1, nb_maps, 1])
-        temp_x_3d = tf.reshape(x, shape=[-1, nb_rows, nb_cols, 1, nb_feats])
-        temp_x_3d = tf.reshape(tf.tile(temp_x_3d, [1, 1, 1, nb_maps, 1]), shape=[-1, nb_maps*nb_maps, nb_feats])
-
-        #计算欧式距离
-        x_corr_3d = tf.subtract(x_3d, temp_x_3d)
-        x_corr_3d = tf.multiply(x_corr_3d, x_corr_3d)
-        x_corr_3d = tf.keras.backend.sum(x_corr_3d, axis=2)
-        x_corr_3d = tf.sqrt(x_corr_3d)
-        x_corr = tf.reshape(x_corr_3d, [-1, nb_rows, nb_cols, nb_maps])
-        x_corr = 10 - x_corr
-        x_sort, _ = tf.nn.top_k(x_corr, nb_maps, sorted=True)
-
-        #选择一定个数的返回
-        # ranks = tf.range(nb_maps - self.nb_pools-1, nb_maps)
-        ranks = tf.range(1, self.nb_pools+1)
-        x_f1st_sort = keras.backend.permute_dimensions(x_sort, (3, 0, 1, 2))
-        # 这里将最大值抛弃，选择剩下的所有结果 （抛弃自身的匹配）
-        x_f1st_pool = tf.gather(x_f1st_sort, ranks)
-
-        x_pool = keras.backend.permute_dimensions(x_f1st_pool, (1, 2, 3, 0))
+        # x_3d = keras.backend.reshape(x, tf.stack([-1, nb_maps, nb_feats]))
+        # x_3d = tf.tile(x_3d, [1, nb_maps, 1])
+        # temp_x_3d = tf.reshape(x, shape=[-1, nb_rows, nb_cols, 1, nb_feats])
+        # temp_x_3d = tf.reshape(tf.tile(temp_x_3d, [1, 1, 1, nb_maps, 1]), shape=[-1, nb_maps*nb_maps, nb_feats])
+        #
+        # #计算欧式距离
+        # x_corr_3d = tf.subtract(x_3d, temp_x_3d)
+        # x_corr_3d = tf.multiply(x_corr_3d, x_corr_3d)
+        # x_corr_3d = tf.keras.backend.sum(x_corr_3d, axis=2)
+        # x_corr_3d = tf.sqrt(x_corr_3d)
+        # x_corr = tf.reshape(x_corr_3d, [-1, nb_rows, nb_cols, nb_maps])
+        # x_corr = 10 - x_corr
+        # x_sort, _ = tf.nn.top_k(x_corr, nb_maps, sorted=True)
+        #
+        # #选择一定个数的返回
+        # # ranks = tf.range(nb_maps - self.nb_pools-1, nb_maps)
+        # ranks = tf.range(1, self.nb_pools+1)
+        # x_f1st_sort = keras.backend.permute_dimensions(x_sort, (3, 0, 1, 2))
+        # # 这里将最大值抛弃，选择剩下的所有结果 （抛弃自身的匹配）
+        # x_f1st_pool = tf.gather(x_f1st_sort, ranks)
+        #
+        # x_pool = keras.backend.permute_dimensions(x_f1st_pool, (1, 2, 3, 0))
 
 
         # self correlation
         #计算自相关系数
-        # x_3d = keras.backend.reshape(x, tf.stack([-1, nb_maps, nb_feats]))
-        # x_corr_3d = tf.matmul(x_3d, x_3d, transpose_a = False, transpose_b = True )/nb_feats
-        # x_corr = keras.backend.reshape( x_corr_3d, tf.stack( [ -1, nb_rows, nb_cols, nb_maps ] ) )
-        # # argsort response maps along the translaton dimension
-        # if (self.nb_pools is not None ):
-        #     ranks = keras.backend.cast( keras.backend.round(tf.lin_space(1., nb_maps - 1, self.nb_pools)), 'int32')
-        # else:
-        #     ranks = tf.range(1, nb_maps, dtype = 'int32' )
-        # #排序相关系数 并选择，这里选择所有的结果
-        # x_sort, _ = tf.nn.top_k(x_corr, k = nb_maps, sorted = True )
-        # # pool out x features at interested ranks
-        # # NOTE: tf v1.1 only support indexing at the 1st dimension
-        # x_f1st_sort = keras.backend.permute_dimensions( x_sort, ( 3, 0, 1, 2 ) )
-        # #这里将最大值抛弃，选择剩下的所有结果 （抛弃自身的匹配）
-        # x_f1st_pool = tf.gather(x_f1st_sort, ranks)
-        #
-        # x_pool = keras.backend.permute_dimensions( x_f1st_pool, ( 1, 2, 3, 0 ) )
+        x_3d = keras.backend.reshape(x, tf.stack([-1, nb_maps, nb_feats]))
+        x_corr_3d = tf.matmul(x_3d, x_3d, transpose_a = False, transpose_b = True )/nb_feats
+        x_corr = keras.backend.reshape( x_corr_3d, tf.stack( [ -1, nb_rows, nb_cols, nb_maps ] ) )
+        # argsort response maps along the translaton dimension
+        if (self.nb_pools is not None ):
+            ranks = keras.backend.cast( keras.backend.round(tf.lin_space(1., nb_maps - 1, self.nb_pools)), 'int32')
+        else:
+            ranks = tf.range(1, nb_maps, dtype = 'int32' )
+        #排序相关系数 并选择，这里选择所有的结果
+        x_sort, _ = tf.nn.top_k(x_corr, k = nb_maps, sorted = True )
+        # pool out x features at interested ranks
+        # NOTE: tf v1.1 only support indexing at the 1st dimension
+        x_f1st_sort = keras.backend.permute_dimensions( x_sort, ( 3, 0, 1, 2 ) )
+        #这里将最大值抛弃，选择剩下的所有结果 （抛弃自身的匹配）
+        x_f1st_pool = tf.gather(x_f1st_sort, ranks)
+
+        x_pool = keras.backend.permute_dimensions( x_f1st_pool, ( 1, 2, 3, 0 ) )
 
 
         return x_pool
@@ -222,7 +222,7 @@ def creat_backbone(input_shape=None, weights=None):
 
     return model.input, model.output
 
-def creat_my_model(img_shape, pre_weight_path, name='my', mode='train'):
+def creat_my_model(img_shape, backbone, pre_weight_path, name='my', mode='train'):
 
     #定义特征提取网络
     '''Create the similarity branch for copy-move forgery detection
@@ -230,7 +230,10 @@ def creat_my_model(img_shape, pre_weight_path, name='my', mode='train'):
     # ---------------------------------------------------------
     # Input
     # ---------------------------------------------------------
-    img_input, xx = creat_backbone(img_shape, pre_weight_path)
+    if backbone == 'vgg':
+        img_input, xx = creat_backbone(img_shape, pre_weight_path)
+    else:
+        img_input, xx = ResNet50(img_shape, pre_weight_path)
     x2 = xx[0]
     x3 = xx[1]
     x4 = xx[2]
@@ -239,7 +242,7 @@ def creat_my_model(img_shape, pre_weight_path, name='my', mode='train'):
 
     # Local Std-Norm Normalization (within each sample)
     xx4 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn4')(x4)
-    # xx2 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn2')(x2)
+    xx2 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn2')(x2)
     xx3 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn3')(x3)
 
     # ---------------------------------------------------------
@@ -249,19 +252,19 @@ def creat_my_model(img_shape, pre_weight_path, name='my', mode='train'):
     ## Self Correlation
 
     #TODO 蚕食修改nb——pools 参数 缩减参数 但前选择了一半
-    xcorr4 = SelfCorrelationPercPooling(name=bname + '_corr', nb_pools=128)(xx4)
+    xcorr4 = SelfCorrelationPercPooling(name=bname + '_corr', nb_pools=256)(xx4)
 
     #将x2 x3计算自相关
     #todo  更改参数为64进行测试
-    xcorr3 = SelfCorrelationPercPooling(name=bname + '_corr3', nb_pools=16)(xx3)
-    # xcorr2 = SelfCorrelationPercPooling(name=bname + '_corr2', nb_pools=6)(xx2)
+    xcorr3 = SelfCorrelationPercPooling(name=bname + '_corr3', nb_pools=32)(xx3)
+    xcorr2 = SelfCorrelationPercPooling(name=bname + '_corr2', nb_pools=16)(xx2)
     ## Global Batch Normalization (across samples)
-    xcorr4_1 = keras.layers.Conv2D(128, (3, 3), padding='same', activation='relu', name=bname+"_cn4")(xcorr4)
+    xcorr4_1 = keras.layers.Conv2D(256, (3, 3), padding='same', activation='relu', name=bname+"_cn4")(xcorr4)
     xn4 = keras.layers.BatchNormalization(name=bname + '_bn4')(xcorr4_1)
     xcorr3_1 = keras.layers.Conv2D(8, (3, 3), padding='same', activation='relu', name=bname + "_cn3")(xcorr3)
     xn3 = keras.layers.BatchNormalization(name=bname + '_bn3')(xcorr3_1)
-    # xcorr2_1 = keras.layers.Conv2D(6, (3, 3), padding='same', activation='relu', name=bname + "_cn2")(xcorr2)
-    # xn2 = keras.layers.BatchNormalization(name=bname + '_bn2')(xcorr2_1)
+    xcorr2_1 = keras.layers.Conv2D(6, (3, 3), padding='same', activation='relu', name=bname + "_cn2")(xcorr2)
+    xn2 = keras.layers.BatchNormalization(name=bname + '_bn2')(xcorr2_1)
     # ---------------------------------------------------------
     # Deconvolution Network
     # ---------------------------------------------------------
@@ -276,7 +279,7 @@ def creat_my_model(img_shape, pre_weight_path, name='my', mode='train'):
     # Deconv x4
     f64a = BilinearUpSampling2D(name=bname + '_bx4a')(f32)
     f64b = BilinearUpSampling2D(name=bname + '_bx4b')(dx32)
-    f64 = keras.layers.Concatenate(axis=-1, name=name + '_dx4_m')([f64a, f64b])
+    f64 = keras.layers.Concatenate(axis=-1, name=name + '_dx4_m')([f64a, f64b, xn2])
     dx64 = BnInception(f64, 4, patch_list, name=bname + '_dx4')
     # Deconv x8
     f128a = BilinearUpSampling2D(name=bname + '_bx8a')(f64a)
@@ -301,5 +304,5 @@ def creat_my_model(img_shape, pre_weight_path, name='my', mode='train'):
     if mode == 'train':
         model = keras.Model(inputs=img_input, outputs=pred_mask, name=name)
     else:
-        model = keras.Model(inputs=img_input, outputs=[pred_mask, xx3], name=name)
+        model = keras.Model(inputs=img_input, outputs=[pred_mask, x4], name=name)
     return model

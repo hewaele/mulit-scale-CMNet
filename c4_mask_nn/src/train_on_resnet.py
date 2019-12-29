@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from casia_data_process import get_casiadataset
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 #屏蔽警告
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 # tf.enable_eager_execution()
@@ -17,8 +17,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 image_size = 256
 #load data
 image_path = '../data/CoMoFoD_small'
-log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v6/'
-pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
+log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v7/'
+pre_weight_path = '../pre_model/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
 
 #单独训练comofod数据集
 x_list, y_list = filter_image(image_path)
@@ -57,12 +57,12 @@ def show_xy(x, y):
 #定义tensorboard回调可视化
 TBCallback = TensorBoard(log_dir=log)
 cpCallback = keras.callbacks.ModelCheckpoint(filepath=os.path.join(log, 'weight_{epoch:04d}.ckpt'), period=5)
-my_model = creat_my_model([image_size, image_size, 3], backbone='vgg', pre_weight_path=pre_weight_path)
-# my_model.load_weights('../log/20191219-134527_v4/weight_0165.ckpt')
+my_model = creat_my_model([image_size, image_size, 3], backbone='resnet50', pre_weight_path=pre_weight_path)
+# my_model.load_weights('../log/20191227-094236_v6/weight_0370.ckpt')
 print(my_model.input)
 print(my_model.output)
 my_model.summary()
-my_model.compile(optimizer=keras.optimizers.Adam(0.001),
+my_model.compile(optimizer=keras.optimizers.Adam(0.0001),
                  loss=keras.losses.binary_crossentropy,
                  metrics=['accuracy'])
 

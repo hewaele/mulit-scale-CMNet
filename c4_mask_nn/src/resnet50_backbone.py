@@ -1,5 +1,5 @@
 import os
-
+import tensorflow as tf
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras import layers
 from tensorflow.python.keras.applications.imagenet_utils import _obtain_input_shape
@@ -183,8 +183,7 @@ def ResNet50(input_shape=None, weights='imagenet'):
       64, (7, 7), strides=(2, 2), padding='same', name='conv1')(img_input)
   x1 = BatchNormalization(axis=bn_axis, name='bn_conv1')(x1)
   x1 = Activation('relu')(x1)
-  x1 = MaxPooling2D((3, 3), strides=(2, 2))(x1)
-
+  x1 = MaxPooling2D((3, 3), strides=(2, 2), padding='same')(x1)
 #block 2 128x128
   x2 = conv_block(x1, 3, [64, 64, 256], stage=2, block='a', strides=(1, 1))
   x2 = identity_block(x2, 3, [64, 64, 256], stage=2, block='b')
@@ -214,16 +213,18 @@ def ResNet50(input_shape=None, weights='imagenet'):
 
   inputs = img_input
   # Create model.
-  model = Model(inputs, out, name='resnet50')
+  model = Model(inputs, [x2, x3, x4, out], name='resnet50')
 
   # load weights
   if weights is not None:
     model.load_weights(weights)
 
-  return model
+  return model.input, model.output
 
 if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     weight_path = '../pre_model/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
-    model = ResNet50([224, 224, 3], weights=weight_path)
+    input, output = ResNet50([256, 256, 3], weights=weight_path)
+    x2, x3, x4, _ = output[0], output[1], output[2], output[3]
+    model = Model(input, _)
     model.summary()

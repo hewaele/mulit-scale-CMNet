@@ -105,7 +105,7 @@ def main():
 
     #载入模型
     pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
-    model = creat_my_model([image_size, image_size, 3], pre_weight_path=None, mode='valid')
+    model = creat_my_model([image_size, image_size, 3], backbone='vgg', pre_weight_path=None, mode='valid')
     weight_path = '../log/20191227-144327_v6/weight_0010.ckpt'
     # model.load_weights(weight_path)
     correct = 0
@@ -126,10 +126,10 @@ def main():
         pre_result -= threshold
         if True:
             show_result(pre_result, mask, source)
-        for i in _[0, :, :, 1]:
+        for i in _[0, :, :, -1]:
             print('{}'.format(i))
         plt.figure()
-        plt.imshow(_[0, :, :, 1])
+        plt.imshow(_[0, :, :, -1])
         plt.show()
         #开始进行评价
         tp, fp, tn, fn, ac, pre, rc, f1, flag = eval_protcal(pre_result, mask)
