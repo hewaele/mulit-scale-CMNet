@@ -252,14 +252,14 @@ def creat_my_model(img_shape, backbone, pre_weight_path, name='my', mode='train'
     ## Self Correlation
 
     #TODO 蚕食修改nb——pools 参数 缩减参数 但前选择了一半
-    xcorr4 = SelfCorrelationPercPooling(name=bname + '_corr', nb_pools=128)(xx4)
+    xcorr4 = SelfCorrelationPercPooling(name=bname + '_corr', nb_pools=256)(xx4)
 
     #将x2 x3计算自相关
     #todo  更改参数为64进行测试
     xcorr3 = SelfCorrelationPercPooling(name=bname + '_corr3', nb_pools=32)(xx3)
     xcorr2 = SelfCorrelationPercPooling(name=bname + '_corr2', nb_pools=16)(xx2)
     ## Global Batch Normalization (across samples)
-    xcorr4_1 = keras.layers.Conv2D(128, (3, 3), padding='same', activation='relu', name=bname+"_cn4")(xcorr4)
+    xcorr4_1 = keras.layers.Conv2D(256, (3, 3), padding='same', activation='relu', name=bname+"_cn4")(xcorr4)
     xn4 = keras.layers.BatchNormalization(name=bname + '_bn4')(xcorr4_1)
     xcorr3_1 = keras.layers.Conv2D(8, (3, 3), padding='same', activation='relu', name=bname + "_cn3")(xcorr3)
     xn3 = keras.layers.BatchNormalization(name=bname + '_bn3')(xcorr3_1)

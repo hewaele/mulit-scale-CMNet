@@ -105,8 +105,8 @@ def main():
 
     #载入模型
     pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
-    model = creat_my_model([image_size, image_size, 3], backbone='resnet50', pre_weight_path=None, mode='valid')
-    weight_path = '../log/20191229-210337_v7/weight_0090.ckpt'
+    model = creat_my_model([image_size, image_size, 3], backbone='vgg16', pre_weight_path=None, mode='valid')
+    weight_path = '../log/20191230-115605_v6/weight_0090.ckpt'
     model.load_weights(weight_path)
     correct = 0
     count = 0
