@@ -58,11 +58,11 @@ def show_xy(x, y):
 TBCallback = TensorBoard(log_dir=log)
 cpCallback = keras.callbacks.ModelCheckpoint(filepath=os.path.join(log, 'weight_{epoch:04d}.ckpt'), period=5)
 my_model = creat_my_model([image_size, image_size, 3], backbone='vgg', pre_weight_path=pre_weight_path)
-# my_model.load_weights('../log/20191219-134527_v4/weight_0165.ckpt')
+my_model.load_weights('../log/20191229-211233_v6/weight_0080.ckpt')
 print(my_model.input)
 print(my_model.output)
 my_model.summary()
-my_model.compile(optimizer=keras.optimizers.Adam(0.001),
+my_model.compile(optimizer=keras.optimizers.Adam(0.0001),
                  loss=keras.losses.binary_crossentropy,
                  metrics=['accuracy'])
 

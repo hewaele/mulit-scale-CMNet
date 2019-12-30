@@ -92,7 +92,7 @@ def threshold_process(pre_result, threshold):
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     # start_eval(0, 200, step=25, show=True)
 
     # #载入数据
@@ -105,13 +105,13 @@ def main():
 
     #载入模型
     pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
-    model = creat_my_model([image_size, image_size, 3], backbone='vgg', pre_weight_path=None, mode='valid')
-    weight_path = '../log/20191227-144327_v6/weight_0010.ckpt'
-    # model.load_weights(weight_path)
+    model = creat_my_model([image_size, image_size, 3], backbone='resnet50', pre_weight_path=None, mode='valid')
+    weight_path = '../log/20191229-210337_v7/weight_0090.ckpt'
+    model.load_weights(weight_path)
     correct = 0
     count = 0
     start = 0
-    end = 200
+    end = 5000
     step = 25
     threshold = 0.
     TP, FP, TN, FN, accuracy, precision, recall, F1 = 0, 0, 0, 0, 0, 0, 0, 0
@@ -119,7 +119,7 @@ def main():
     TP_c, FP_c, TN_c, FN_c, accuracy_c, precision_c, recall_c, F1_c = 0, 0, 0, 0, 0, 0, 0, 0
     # 单张图片预测
     statr_time = time.time()
-    for source, mask in zip(['./test2.png'], y_list[start:start+1:step]):
+    for source, mask in zip(x_list[start:end:step], y_list[start:end:step]):
         img = Image.open(source).convert('RGB').resize([image_size, image_size])
         #执行预测
         pre_result, _ = model.predict(np.array(img).reshape([1, image_size, image_size, 3])/255.0)
