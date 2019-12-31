@@ -8,6 +8,7 @@ from tf_dataset import creat_tfdata, filter_image
 import numpy as np
 import matplotlib.pyplot as plt
 from casia_data_process import get_casiadataset
+import random
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 #屏蔽警告
@@ -31,7 +32,11 @@ test_xy = tf.data.Dataset.zip((test_x, test_y)).repeat().batch(2)
 target_path = '../data/casia-dataset/target'
 mask_path = '../data/casia-dataset/mask'
 x_list, y_list = get_casiadataset(target_path, mask_path)
+
+seed = time.ctime()
+random.seed(seed)
 tfdata_x = creat_tfdata(x_list[:], 3, image_size)
+random.seed(seed)
 tfdata_y = creat_tfdata(y_list[:], 1, image_size)
 batchs = 2
 epochs = 400
