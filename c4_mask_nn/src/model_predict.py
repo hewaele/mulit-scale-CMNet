@@ -92,7 +92,7 @@ def threshold_process(pre_result, threshold):
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     # start_eval(0, 200, step=25, show=True)
 
     # #载入数据
@@ -103,21 +103,21 @@ def main():
     # mask_path = '../data/casia-dataset/mask'
     # x_list, y_list = get_casiadataset(target_path, mask_path)
 
-    # # 测试casia增强数据
-    # target_path = '../data/augmentation_data/image'
-    # mask_path = '../data/augmentation_data/mask'
-    # x_list, y_list = get_casiadataset(target_path, mask_path)
+    # 测试casia增强数据
+    target_path = '../data/augmentation_data/image'
+    mask_path = '../data/augmentation_data/mask'
+    x_list, y_list = get_casiadataset(target_path, mask_path)
 
     #载入模型
     pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
     model = creat_my_model([image_size, image_size, 3], backbone='vgg', pre_weight_path=None, mode='valid')
-    weight_path = '../log/20191231-155407_v4/weight_0002.ckpt'
+    weight_path = '../log/20191219-134527_v4/weight_0165.ckpt'
     model.load_weights(weight_path)
     correct = 0
     count = 0
     start = 0
-    end = 5000
-    step = 25
+    end = 50000
+    step = 1
     threshold = 0.
     TP, FP, TN, FN, accuracy, precision, recall, F1 = 0, 0, 0, 0, 0, 0, 0, 0
 
