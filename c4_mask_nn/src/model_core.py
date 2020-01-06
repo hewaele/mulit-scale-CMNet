@@ -88,6 +88,51 @@ class SelfCorrelationPercPooling( keras.layers.Layer ) :
         nb_pools = self.nb_pools if (self.nb_pools is not None) else (nb_rows * nb_cols - 1)
         return tuple([bsize, nb_rows, nb_cols, nb_pools])
 
+class SelfCorrelationPercPooling_newaug( keras.layers.Layer ) :
+    '''Custom Self-Correlation Percentile Pooling Layer
+    Arugment:
+        nb_pools = int, number of percentile poolings
+    Input:
+        x = tensor4d, (n_samples, n_rows, n_cols, n_feats)
+    Output:
+        x_pool = tensor4d, (n_samples, n_rows, n_cols, nb_pools)
+    '''
+    def __init__(self, nb_pools=256, **kwargs ) :
+        self.nb_pools = nb_pools
+        super( SelfCorrelationPercPooling_newaug, self ).__init__( **kwargs )
+    def build( self, input_shape ) :
+        self.built = True
+    def call( self, x, mask=None ):
+        # parse input feature shape
+        #获取输入shape
+        bsize, nb_rows, nb_cols, nb_feats = keras.backend.int_shape(x)
+        nb_maps = nb_rows * nb_cols
+
+        # self correlation
+        #计算自相关系数
+        x_3d = keras.backend.reshape(x, tf.stack([-1, nb_maps, nb_feats]))
+        x_corr_3d = tf.matmul(x_3d, x_3d, transpose_a = False, transpose_b = True )/nb_feats
+        x_corr = keras.backend.reshape( x_corr_3d, tf.stack( [ -1, nb_rows, nb_cols, nb_maps ] ) )
+        # argsort response maps along the translaton dimension
+        #选择前多少个
+        ranks = tf.range(1, self.nb_pools+1, dtype = 'int32' )
+        #排序相关系数 并选择，这里选择所有的结果
+        x_sort, _ = tf.nn.top_k(x_corr, k = nb_maps, sorted = True )
+        # pool out x features at interested ranks
+        # NOTE: tf v1.1 only support indexing at the 1st dimension
+        x_f1st_sort = keras.backend.permute_dimensions( x_sort, ( 3, 0, 1, 2 ) )
+        #这里将最大值抛弃，选择剩下的所有结果 （抛弃自身的匹配）
+        x_f1st_pool = tf.gather(x_f1st_sort, ranks)
+
+        x_pool = keras.backend.permute_dimensions( x_f1st_pool, ( 1, 2, 3, 0 ) )
+
+
+        return x_pool
+    def compute_output_shape( self, input_shape ) :
+        bsize, nb_rows, nb_cols, nb_feats = input_shape
+        nb_pools = self.nb_pools if (self.nb_pools is not None) else (nb_rows * nb_cols - 1)
+        return tuple([bsize, nb_rows, nb_cols, nb_pools])
+
 def BnInception(x, nb_inc=16, inc_filt_list=[(1,1), (3,3), (5,5)], name='uinc') :
     '''Basic Google inception module with batch normalization
     Input:
@@ -99,8 +144,8 @@ def BnInception(x, nb_inc=16, inc_filt_list=[(1,1), (3,3), (5,5)], name='uinc') 
         xn = tensor4d, (n_samples, n_rows, n_cols, n_new_feats)
     '''
     uc_list = []
-    for idx, ftuple in enumerate(inc_filt_list ) :
-        uc = keras.layers.Conv2D( nb_inc, ftuple, activation='linear', padding='same', name=name+'_c%d' % idx)(x)
+    for idx, ftuple in enumerate(inc_filt_list) :
+        uc = keras.layers.Conv2D(nb_inc, ftuple, activation='linear', padding='same', name=name+'_c%d' % idx)(x)
         uc_list.append(uc)
     if ( len( uc_list ) > 1 ):
         uc_merge = keras.layers.Concatenate( axis=-1, name=name+'_merge')(uc_list)
@@ -304,5 +349,90 @@ def creat_my_model(img_shape, backbone, pre_weight_path, name='my', mode='train'
     if mode == 'train':
         model = keras.Model(inputs=img_input, outputs=pred_mask, name=name)
     else:
-        model = keras.Model(inputs=img_input, outputs=[pred_mask, masks], name=name)
+        model = keras.Model(inputs=img_input, outputs=[pred_mask, xcorr2, xcorr3, xcorr4], name=name)
+    return model
+
+def creat_my_model_newaug(img_shape, backbone, pre_weight_path, name='my', mode='train'):
+
+    #定义特征提取网络
+    '''Create the similarity branch for copy-move forgery detection
+        '''
+    # ---------------------------------------------------------
+    # Input
+    # ---------------------------------------------------------
+    if backbone == 'vgg':
+        img_input, xx = creat_backbone(img_shape, pre_weight_path)
+    else:
+        img_input, xx = ResNet50(img_shape, pre_weight_path)
+    x2 = xx[0]
+    x3 = xx[1]
+    x4 = xx[2]
+    # ---------------------------------------------------------
+    bname = name
+
+    # Local Std-Norm Normalization (within each sample)
+    xx4 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn4')(x4)
+    xx2 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn2')(x2)
+    xx3 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn3')(x3)
+
+    # ---------------------------------------------------------
+    # Self Correlation Pooling
+    # ---------------------------------------------------------
+    bname = name + '_corr'
+    ## Self Correlation
+
+    #TODO 蚕食修改nb——pools 参数 缩减参数 但前选择了一半
+    xcorr4 = SelfCorrelationPercPooling_newaug(name=bname + '_corr', nb_pools=128)(xx4)
+
+    #将x2 x3计算自相关
+    #todo  更改参数为64进行测试
+    xcorr3 = SelfCorrelationPercPooling_newaug(name=bname + '_corr3', nb_pools=64)(xx3)
+    xcorr2 = SelfCorrelationPercPooling_newaug(name=bname + '_corr2', nb_pools=32)(xx2)
+    ## Global Batch Normalization (across samples)
+    xcorr4_1 = keras.layers.Conv2D(128, (3, 3), padding='same', activation='relu', name=bname+"_cn4")(xcorr4)
+    xn4 = keras.layers.BatchNormalization(name=bname + '_bn4')(xcorr4_1)
+    xcorr3_1 = keras.layers.Conv2D(64, (3, 3), padding='same', activation='relu', name=bname + "_cn3")(xcorr3)
+    xn3 = keras.layers.BatchNormalization(name=bname + '_bn3')(xcorr3_1)
+    xcorr2_1 = keras.layers.Conv2D(32, (3, 3), padding='same', activation='relu', name=bname + "_cn2")(xcorr2)
+    xn2 = keras.layers.BatchNormalization(name=bname + '_bn2')(xcorr2_1)
+    # ---------------------------------------------------------
+    # Deconvolution Network
+    # ---------------------------------------------------------
+    patch_list = [(1, 1), (3, 3), (5, 5)]
+    # MultiPatch Featex
+    bname = name + '_dconv'
+    f16 = BnInception(xn4, 64, patch_list, name=bname + '_mpf')
+    # Deconv x2
+    f32 = BilinearUpSampling2D(name=bname + '_bx2')(f16)
+    f32 = keras.layers.Concatenate(axis=-1, name=name + '_dx2_m')([f32, xn3])
+    dx32 = BnInception(f32, 32, patch_list, name=bname + '_dx2')
+    # Deconv x4
+    f64a = BilinearUpSampling2D(name=bname + '_bx4a')(f32)
+    f64b = BilinearUpSampling2D(name=bname + '_bx4b')(dx32)
+    f64 = keras.layers.Concatenate(axis=-1, name=name + '_dx4_m')([f64a, f64b, xn2])
+    dx64 = BnInception(f64, 16, patch_list, name=bname + '_dx4')
+    # Deconv x8
+    f128a = BilinearUpSampling2D(name=bname + '_bx8a')(f64a)
+    f128b = BilinearUpSampling2D(name=bname + '_bx8b')(dx64)
+    f128 = keras.layers.Concatenate(axis=-1, name=name + '_dx8_m')([f128a, f128b])
+    dx128 = BnInception(f128, 8, patch_list, name=bname + '_dx8')
+    # Deconv x16
+    f256a = BilinearUpSampling2D(name=bname + '_bx16a')(f128a)
+    f256b = BilinearUpSampling2D(name=bname + '_bx16b')(dx128)
+    f256 = keras.layers.Concatenate(axis=-1, name=name + '_dx16_m')([f256a, f256b])
+    dx256 = BnInception(f256, 8, patch_list, name=bname + '_dx16')
+    # Summerize
+    fm256 = keras.layers.Concatenate(axis=-1, name=name + '_mfeat')([f256a, dx256])
+    masks = BnInception(fm256, 8, [(5, 5), (7, 7), (11, 11)], name=bname + '_dxF')
+    # ---------------------------------------------------------
+    # Output for Auxiliary Task
+    # ---------------------------------------------------------
+    pred_mask = keras.layers.Conv2D(1, (3, 3), activation='sigmoid', name=name + '_pred_mask', padding='same')(masks)
+    # ---------------------------------------------------------
+    # End to End
+    # ---------------------------------------------------------
+    if mode == 'train':
+        model = keras.Model(inputs=img_input, outputs=pred_mask, name=name)
+    else:
+        model = keras.Model(inputs=img_input, outputs=[pred_mask, xcorr2], name=name)
     return model

@@ -1,6 +1,5 @@
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.preprocessing.image import ImageDataGenerator, Iterator
 import time
 import os
 from model_core import creat_my_model
@@ -15,10 +14,11 @@ from sklearn.utils import shuffle
 from utiles import my_generator
 
 if __name__ == '__main__':
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     #屏蔽警告
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
     # tf.enable_eager_execution()
+
     from keras.backend.tensorflow_backend import set_session
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -26,18 +26,18 @@ if __name__ == '__main__':
 
     image_size = 256
     batchs = 2
-    epochs = 50
+    epochs = 200
 
     #load data
-    log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v4_vgg/'
-    backbone = 'vgg'
+    log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v4_resnet/'
+    backbone = 'resnet'
     if backbone == 'vgg':
         pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
     else:
         pre_weight_path = '../pre_model/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
 
     retrain = True
-    ckpt_path = '../log/20200103-110241_v4_vgg/weight_0016.ckpt'
+    ckpt_path = '../log/20200103-111136_v4_resnet/weight_0011.ckpt'
 
     #comofod数据集
     image_path = '../data/CoMoFoD_small'
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     #定义tensorboard回调可视化
     TBCallback = TensorBoard(log_dir=log)
     cpCallback = keras.callbacks.ModelCheckpoint(filepath=os.path.join(log, 'weight_{epoch:04d}.ckpt'), period=1)
-    my_model = creat_my_model([image_size, image_size, 3], backbone=backbone, pre_weight_path=None, mode='train')
+    my_model = creat_my_model([image_size, image_size, 3], backbone=backbone, pre_weight_path=pre_weight_path, mode='train')
     my_model.summary()
 
 

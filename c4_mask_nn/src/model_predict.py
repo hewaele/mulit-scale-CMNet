@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 import time
 import os
 import sys
-from model_core import creat_my_model
+from model_core import creat_my_model, creat_my_model_newaug
 from tf_dataset import filter_image, load_and_prepro_image
 from casia_data_process import get_casiadataset
 
@@ -61,6 +61,14 @@ def show_result(pre_result, mask, source):
         plt.imshow(source)
     plt.show()
 
+def show_tensor(*arg, position=0):
+    l = len(arg)
+    plt.figure()
+    for index, ti in enumerate(arg):
+        plt.subplot('1'+str(l)+str(index+1))
+        plt.imshow(ti[0, :, :, position])
+    plt.show()
+
 
 def eval_protcal(pre_result, mask):
     #现将预测结果01化
@@ -77,7 +85,7 @@ def eval_protcal(pre_result, mask):
     FN = image_size**2 - TP - FP - TN
 
     #计算precision, recall, F1
-    ac = (TP+TN)/(TP+FP+TN+FN+0.000001)
+    ac = (TP+TN)/(image_size**2)
     precision = TP/(TP+FP+0.0000001)
     recall = TP/(TP+FN+0.0000001)
     F1 = 2*TP/(2*TP+FP+FN+0.000001)
@@ -86,13 +94,14 @@ def eval_protcal(pre_result, mask):
 
     return TP, FP, TN, FN, ac, precision, recall, F1, flag
 
-def threshold_process(pre_result, threshold):
-    shape = pre_result.shape
-
-
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    from keras.backend.tensorflow_backend import set_session
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    set_session(tf.Session(config=config))
+
     # start_eval(0, 200, step=25, show=True)
 
     # #载入数据
@@ -104,20 +113,20 @@ def main():
     # x_list, y_list = get_casiadataset(target_path, mask_path)
 
     # 测试casia增强数据
-    target_path = '../data/augmentation_data/image'
-    mask_path = '../data/augmentation_data/mask'
-    x_list, y_list = get_casiadataset(target_path, mask_path)
+    # target_path = '../data/augmentation_data/image'
+    # mask_path = '../data/augmentation_data/mask'
+    # x_list, y_list = get_casiadataset(target_path, mask_path)
 
     #载入模型
     pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
-    model = creat_my_model([image_size, image_size, 3], backbone='vgg', pre_weight_path=None, mode='valid')
-    weight_path = '../log/20191219-134527_v4/weight_0165.ckpt'
+    model = creat_my_model([image_size, image_size, 3], backbone='vgg', pre_weight_path=pre_weight_path, mode='valid')
+    weight_path = '../log/20200106-102419_v4_vgg/weight_0026.ckpt'
     model.load_weights(weight_path)
     correct = 0
     count = 0
     start = 0
-    end = 50000
-    step = 1
+    end = 5000
+    step = 25
     threshold = 0.
     TP, FP, TN, FN, accuracy, precision, recall, F1 = 0, 0, 0, 0, 0, 0, 0, 0
 
@@ -127,15 +136,13 @@ def main():
     for source, mask in zip(x_list[start:end:step], y_list[start:end:step]):
         img = Image.open(source).convert('RGB').resize([image_size, image_size])
         #执行预测
-        pre_result, _ = model.predict(np.array(img).reshape([1, image_size, image_size, 3])/255.0)
+        pre_result, x2, x3, x4 = model.predict(np.array(img).reshape([1, image_size, image_size, 3])/255.0)
         pre_result -= threshold
         # if True:
         #     show_result(pre_result, mask, source)
-        # # for i in _[0, :, :, -1]:
-        # #     print('{}'.format(i))
-        # plt.figure()
-        # plt.imshow(_[0, :, :, -1])
-        # plt.show()
+        # for i in _[0, :, :, -1]:
+        #     print('{}'.format(i))
+        # show_tensor(x2, x3, x4)
         #开始进行评价
         tp, fp, tn, fn, ac, pre, rc, f1, flag = eval_protcal(pre_result, mask)
 
@@ -150,6 +157,8 @@ def main():
         count += 1
         if f1 >= 0.5:
             print(count)
+            show_result(pre_result, mask, source)
+            show_tensor(x2, x3, x4, position=1)
             TP_c += tp
             FP_c += fp
             TN_c += tn
@@ -159,6 +168,11 @@ def main():
             recall_c += rc
             F1_c += f1
             correct += 1
+        else:
+            print(source)
+            # show_result(pre_result, mask, source)
+            # show_tensor(x2, x3, x4, position=1)
+
 
     end_time = time.time()
     print("consume time:{} process time per img:{}".format(end_time - statr_time, (end_time-statr_time)/count))

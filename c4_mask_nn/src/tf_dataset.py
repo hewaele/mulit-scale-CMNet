@@ -80,7 +80,7 @@ def creat_augmentation_data(images_path, mask_path, new_size):
         img = tf.image.resize_images(img, [new_size, new_size])
         mask = tf.image.resize_images(mask, [new_size, new_size])
 
-
+        #
         noise = tf.random_normal(shape=tf.shape(img), mean=0.0, stddev=0.05,
                                  dtype=tf.float32)
         img = tf.add(img, noise)
