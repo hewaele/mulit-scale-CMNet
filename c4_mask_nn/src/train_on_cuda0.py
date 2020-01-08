@@ -29,7 +29,7 @@ if __name__ == '__main__':
     epochs = 50
 
     #load data
-    log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v4_vgg/'
+    log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v4_vgg_without_rescale_on_aug/'
     backbone = 'vgg'
     if backbone == 'vgg':
         pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
@@ -37,29 +37,29 @@ if __name__ == '__main__':
         pre_weight_path = '../pre_model/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
 
     retrain = True
-    ckpt_path = '../log/20200103-110241_v4_vgg/weight_0016.ckpt'
+    ckpt_path = '../log/20200107-094903_v4_vgg/weight_0003.ckpt'
 
     #comofod数据集
     image_path = '../data/CoMoFoD_small'
     x_list, y_list = filter_image(image_path)
     #创建测试训练集
-    test_xy = my_generator(x_list[::25], y_list[::25], batchs, 256)
+    test_xy = my_generator(x_list[::25], y_list[::25], batchs, 256, rescale=False)
 
     #训练casia数据集，测试comofod数据集
-    target_path = '../data/casia-dataset/target'
-    mask_path = '../data/casia-dataset/mask'
-    x_list, y_list = get_casiadataset(target_path, mask_path)
+    # target_path = '../data/casia-dataset/target'
+    # mask_path = '../data/casia-dataset/mask'
+    # x_list, y_list = get_casiadataset(target_path, mask_path)
 
     #训练casia增强数据集，测试comofod数据集
-    # target_path = '../data/augmentation_data/image'
-    # mask_path = '../data/augmentation_data/mask'
-    # x_list, y_list = get_casiadataset(target_path, mask_path)
+    target_path = '../data/augmentation_data/image'
+    mask_path = '../data/augmentation_data/mask'
+    x_list, y_list = get_casiadataset(target_path, mask_path)
     x_list = x_list[:]
     y_list = y_list[:]
     nums = len(x_list)
 
     x_list, y_list = shuffle(x_list, y_list)
-    train_xy = my_generator(x_list, y_list, batchs, 256)
+    train_xy = my_generator(x_list, y_list, batchs, 256, rescale=False)
     print('data load done')
 
     #定义tensorboard回调可视化

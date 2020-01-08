@@ -6,14 +6,11 @@ image_path = '../data/CoMoFoD_small/'
 x_list, y_list = filter_image(image_path)
 print(x_list[::25])
 print(y_list[::25])
-test = my_generator(x_list[::25], y_list[::25], 2, new_size=256)
+test = my_generator(x_list[::25], y_list[::25], 1, new_size=256)
 count = 0
 flag = 0
 for ti in test:
-    print(count)
-    flag += np.sum(ti[1])
+    print(ti)
     count += 1
-    if count >= 200:
+    if count >= 0:
         break
-
-print(flag/(256*256*count))

@@ -349,7 +349,7 @@ def creat_my_model(img_shape, backbone, pre_weight_path, name='my', mode='train'
     if mode == 'train':
         model = keras.Model(inputs=img_input, outputs=pred_mask, name=name)
     else:
-        model = keras.Model(inputs=img_input, outputs=[pred_mask, xcorr2, xcorr3, xcorr4], name=name)
+        model = keras.Model(inputs=img_input, outputs=[pred_mask, xn2, xn3, xn4], name=name)
     return model
 
 def creat_my_model_newaug(img_shape, backbone, pre_weight_path, name='my', mode='train'):
@@ -434,5 +434,5 @@ def creat_my_model_newaug(img_shape, backbone, pre_weight_path, name='my', mode=
     if mode == 'train':
         model = keras.Model(inputs=img_input, outputs=pred_mask, name=name)
     else:
-        model = keras.Model(inputs=img_input, outputs=[pred_mask, xcorr2], name=name)
+        model = keras.Model(inputs=img_input, outputs=[pred_mask, x2, x3, x4], name=name)
     return model

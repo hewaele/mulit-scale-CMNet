@@ -10,6 +10,7 @@ from model_core import creat_my_model, creat_my_model_newaug
 from tf_dataset import filter_image, load_and_prepro_image
 from casia_data_process import get_casiadataset
 from source_buster_model import create_BusterNet_model
+from sklearn.metrics import precision_recall_fscore_support
 # tf.enable_eager_execution()
 image_size = 256
 def pre2img(result, channel=1):
@@ -26,24 +27,6 @@ def pre2img(result, channel=1):
     img = Image.fromarray(result)
     return img
 
-
-def img2pre(img, channel = 3):
-    """
-    将图片转换为数组用于预测
-    :param img:
-    :return:
-    """
-    img = Image.open(img)
-    if channel == 3:
-        img = img.convert('RGB').resize([image_size, image_size])
-
-    else:
-        channel = 1
-        img = img.convert('L').resize([image_size, image_size])
-    img = np.array(img)/255.0
-    return img.reshape([1, image_size, image_size, channel])
-
-
 def show_result(pre_result, mask, source):
     plt.figure()
 
@@ -53,11 +36,10 @@ def show_result(pre_result, mask, source):
         plt.imshow(pre_result)
     if mask is not None:
         plt.subplot(132)
-        mask = Image.open(mask).convert('L').resize([image_size, image_size])
+        mask = pre2img(mask, 1)
         plt.imshow(mask)
     if source is not None:
         plt.subplot(133)
-        source = Image.open(source).convert('RGB').resize([image_size, image_size])
         plt.imshow(source)
     plt.show()
 
@@ -66,15 +48,13 @@ def show_tensor(*arg, position=0):
     plt.figure()
     for index, ti in enumerate(arg):
         plt.subplot('1'+str(l)+str(index+1))
-        plt.imshow(np.sum(ti, axis=3)[0])
+        plt.imshow(ti)
     plt.show()
 
 
 def eval_protcal(pre_result, mask):
     #现将预测结果01化
-    pre_result = np.round(pre_result).reshape([image_size, image_size])
-    mask = Image.open(mask).convert('L').resize([image_size, image_size])
-    mask = np.array(mask).reshape([image_size, image_size])/255.0
+    pre_result = np.round(pre_result)
     mask = np.round(mask)
 
     #两种评价方式，一种计算整体，一种计算单张
@@ -90,13 +70,11 @@ def eval_protcal(pre_result, mask):
     recall = TP/(TP+FN+0.0000001)
     F1 = 2*TP/(2*TP+FP+FN+0.000001)
 
-    flag = TP/(np.sum(pre_result) + np.sum(mask) - TP)
-
-    return TP, FP, TN, FN, ac, precision, recall, F1, flag
+    return TP, FP, TN, FN, ac, precision, recall, F1
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     from keras.backend.tensorflow_backend import set_session
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -108,9 +86,9 @@ def main():
     image_path = '../data/CoMoFoD_small/'
     x_list, y_list = filter_image(image_path)
     #测试casia数据
-    target_path = '../data/casia-dataset/target'
-    mask_path = '../data/casia-dataset/mask'
-    x_list, y_list = get_casiadataset(target_path, mask_path)
+    # target_path = '../data/casia-dataset/target'
+    # mask_path = '../data/casia-dataset/mask'
+    # x_list, y_list = get_casiadataset(target_path, mask_path)
 
     # 测试casia增强数据
     # target_path = '../data/augmentation_data/image'
@@ -118,27 +96,28 @@ def main():
     # x_list, y_list = get_casiadataset(target_path, mask_path)
 
     #载入模型
-    pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
-    model = creat_my_model([image_size, image_size, 3], backbone='vgg', pre_weight_path=None, mode='valid')
-    weight_path = '../log/20200107-130724_v4_vgg_without_rescale/weight_0019.ckpt'
-    model.load_weights(weight_path)
+    weight_path = '../pre_model/pretrained_busterNet.hd5'
+    model = create_BusterNet_model(weight_path)
+    model.summary()
     correct = 0
     count = 0
     start = 0
     end = 5000
-    step = 1
-    threshold = -0.0
+    step = 25
+    threshold = 0.
     TP, FP, TN, FN, accuracy, precision, recall, F1 = 0, 0, 0, 0, 0, 0, 0, 0
 
     TP_c, FP_c, TN_c, FN_c, accuracy_c, precision_c, recall_c, F1_c = 0, 0, 0, 0, 0, 0, 0, 0
     # 单张图片预测
     statr_time = time.time()
-    for source, mask in zip(x_list[start:end:step], y_list[start:end:step]):
+    for source, mask in zip(['./2m2d.png'], y_list[start:start+1:step]):
         img = Image.open(source).convert('RGB').resize([image_size, image_size])
         #执行预测
-        pre_result, x2, x3, x4 = model.predict(np.array(img).reshape([1, image_size, image_size, 3]))
-        pre_result -= threshold
-        # show_result(pre_result, mask, source)
+        pre_result = model.predict(np.array(img).reshape([1, image_size, image_size, 3]))
+        pre_result = pre_result[0, :, :, 2].ravel() <= 0.5
+        mask = Image.open(mask).convert('L').resize([image_size, image_size])
+        mask = np.array(mask).ravel() != 0
+        show_result(pre_result, mask, img)
         # show_tensor(x2, x3, x4, position=2)
         # print(x2.shape)
         # t1 = np.sum(x3, axis=3)
@@ -146,7 +125,7 @@ def main():
         #     print('{}'.format(ti))
 
         #开始进行评价
-        tp, fp, tn, fn, ac, pre, rc, f1, flag = eval_protcal(pre_result, mask)
+        tp, fp, tn, fn, ac, pre, rc, f1 = eval_protcal(pre_result, mask)
 
         TP += tp
         FP += fp

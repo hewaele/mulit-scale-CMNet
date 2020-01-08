@@ -73,7 +73,7 @@ if __name__ == '__main__':
         print('hahah')
         my_model.load_weights(ckpt_path)
 
-    my_model.compile(optimizer=keras.optimizers.Adam(0.001),
+    my_model.compile(optimizer=keras.optimizers.Adam(0.0001),
                      loss=keras.losses.binary_crossentropy,
                      metrics=['accuracy'])
 
