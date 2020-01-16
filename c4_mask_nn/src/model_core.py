@@ -436,3 +436,91 @@ def creat_my_model_newaug(img_shape, backbone, pre_weight_path, name='my', mode=
     else:
         model = keras.Model(inputs=img_input, outputs=[pred_mask, x2, x3, x4], name=name)
     return model
+
+def creat_my_model_simple(img_shape, backbone, pre_weight_path, name='my', mode='train'):
+    """
+    删除16 X 16特征图
+    :param img_shape:
+    :param backbone:
+    :param pre_weight_path:
+    :param name:
+    :param mode:
+    :return:
+    """
+    #定义特征提取网络
+    '''Create the similarity branch for copy-move forgery detection
+        '''
+    # ---------------------------------------------------------
+    # Input
+    # ---------------------------------------------------------
+    if backbone == 'vgg':
+        img_input, xx = creat_backbone(img_shape, pre_weight_path)
+    else:
+        img_input, xx = ResNet50(img_shape, pre_weight_path)
+    x2 = xx[0]
+    x3 = xx[1]
+    # ---------------------------------------------------------
+    bname = name
+
+    # Local Std-Norm Normalization (within each sample)
+    xx2 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn2')(x2)
+    xx3 = keras.layers.Activation(std_norm_along_chs, name=bname + '_sn3')(x3)
+
+    # ---------------------------------------------------------
+    # Self Correlation Pooling
+    # ---------------------------------------------------------
+    bname = name + '_corr'
+    ## Self Correlation
+
+    #TODO 蚕食修改nb——pools 参数 缩减参数 但前选择了一半
+
+    #将x2 x3计算自相关
+    #todo  更改参数为64进行测试
+    xcorr3 = SelfCorrelationPercPooling(name=bname + '_corr3', nb_pools=4096)(xx3)
+    xcorr2 = SelfCorrelationPercPooling(name=bname + '_corr2', nb_pools=1024)(xx2)
+    ## Global Batch Normalization (across samples)
+    xcorr3_1 = keras.layers.Conv2D(32, (3, 3), padding='same', activation='relu', name=bname + "_cn3")(xcorr3)
+    xn3 = keras.layers.BatchNormalization(name=bname + '_bn3')(xcorr3_1)
+    xcorr2_1 = keras.layers.Conv2D(16, (3, 3), padding='same', activation='relu', name=bname + "_cn2")(xcorr2)
+    xn2 = keras.layers.BatchNormalization(name=bname + '_bn2')(xcorr2_1)
+    # ---------------------------------------------------------
+    # Deconvolution Network
+    # ---------------------------------------------------------
+    patch_list = [(1, 1), (3, 3), (5, 5)]
+    # MultiPatch Featex
+    bname = name + '_dconv'
+    f32 = BnInception(xn3, 32, patch_list, name=bname + '_mpf')
+    # Deconv x2
+    f64 = BilinearUpSampling2D(name=bname + '_bx2')(f32)
+    f64 = keras.layers.Concatenate(axis=-1, name=name + '_dx2_m')([f64, xn2])
+    dx64 = BnInception(f64, 16, patch_list, name=bname + '_dx2')
+    # Deconv x4
+    f128a = BilinearUpSampling2D(name=bname + '_bx4a')(f64)
+    f128b = BilinearUpSampling2D(name=bname + '_bx4b')(dx64)
+    f128 = keras.layers.Concatenate(axis=-1, name=name + '_dx4_m')([f128a, f128b])
+    dx128 = BnInception(f128, 8, patch_list, name=bname + '_dx4')
+    # Deconv x8
+    f256a = BilinearUpSampling2D(name=bname + '_bx8a')(f128a)
+    f256b = BilinearUpSampling2D(name=bname + '_bx8b')(dx128)
+    f256 = keras.layers.Concatenate(axis=-1, name=name + '_dx8_m')([f256a, f256b])
+    dx256 = BnInception(f256, 4, patch_list, name=bname + '_dx8')
+    # Deconv x16
+    # f256a = BilinearUpSampling2D(name=bname + '_bx16a')(f128a)
+    # f256b = BilinearUpSampling2D(name=bname + '_bx16b')(dx128)
+    # f256 = keras.layers.Concatenate(axis=-1, name=name + '_dx16_m')([f256a, f256b])
+    # dx256 = BnInception(f256, 2, patch_list, name=bname + '_dx16')
+    # Summerize
+    fm256 = keras.layers.Concatenate(axis=-1, name=name + '_mfeat')([f256a, dx256])
+    masks = BnInception(fm256, 4, [(5, 5), (7, 7), (11, 11)], name=bname + '_dxF')
+    # ---------------------------------------------------------
+    # Output for Auxiliary Task
+    # ---------------------------------------------------------
+    pred_mask = keras.layers.Conv2D(1, (3, 3), activation='sigmoid', name=name + '_pred_mask', padding='same')(masks)
+    # ---------------------------------------------------------
+    # End to End
+    # ---------------------------------------------------------
+    if mode == 'train':
+        model = keras.Model(inputs=img_input, outputs=pred_mask, name=name)
+    else:
+        model = keras.Model(inputs=img_input, outputs=[pred_mask, xn2, xn3], name=name)
+    return model
