@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 import time
 import os
-from model_core import creat_my_model
+from model_core import creat_my_model, creat_my_model_v10
 from tensorflow.keras.callbacks import TensorBoard
 from tf_dataset import creat_tfdata, filter_image, load_and_prepro_image
 import numpy as np
@@ -26,10 +26,10 @@ if __name__ == '__main__':
 
     image_size = 256
     batchs = 2
-    epochs = 200
+    epochs = 500
 
     #load data
-    log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v4_vgg_without_rescale_mydata6000/'
+    log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v10_vgg_without_rescale_casia/'
     backbone = 'vgg'
     if backbone == 'vgg':
         pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
@@ -37,7 +37,7 @@ if __name__ == '__main__':
         pre_weight_path = '../pre_model/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
 
     retrain = True
-    ckpt_path = '../log/20200108-183312_v4_vgg_without_rescale_on_aug/weight_0024.ckpt'
+    ckpt_path = '../log/20200307-205340_v10_vgg_without_rescale_casia/weight_0240.ckpt'
 
     #comofod数据集
     image_path = '../data/CoMoFoD_small'
@@ -46,19 +46,25 @@ if __name__ == '__main__':
     test_xy = my_generator(x_list[::25], y_list[::25], batchs, 256, rescale=False)
 
     #训练casia数据集，测试comofod数据集
-    # target_path = '../data/casia-dataset/target'
-    # mask_path = '../data/casia-dataset/mask'
-    # x_list, y_list = get_casiadataset(target_path, mask_path)
+    target_path = '../data/casia-dataset/target'
+    mask_path = '../data/casia-dataset/mask'
+    x_list, y_list = get_casiadataset(target_path, mask_path)
 
     #训练自己生成的数据集
-    target_path = '/home/hewaele/PycharmProjects/creat_cmfd_image/cmfd_data/images_small'
-    mask_path = '/home/hewaele/PycharmProjects/creat_cmfd_image/cmfd_data/mask_small'
-    x_list, y_list = get_casiadataset(target_path, mask_path)
+    # target_path = '/home/hewaele/PycharmProjects/creat_cmfd_image/cmfd_data/images_small'
+    # mask_path = '/home/hewaele/PycharmProjects/creat_cmfd_image/cmfd_data/mask_small'
+    # x_list, y_list = get_casiadataset(target_path, mask_path)
 
     #训练casia增强数据集，测试comofod数据集
     # target_path = '../data/augmentation_data/image'
     # mask_path = '../data/augmentation_data/mask'
     # x_list, y_list = get_casiadataset(target_path, mask_path)
+
+    # 训练USCISI增强数据集，测试comofod数据集
+    # target_path = '../data/uscisi_dataset/images'
+    # mask_path = '../data/uscisi_dataset/mask'
+    # x_list, y_list = get_casiadataset(target_path, mask_path)
+
 
     x_list = x_list[:]
     y_list = y_list[:]
@@ -70,8 +76,8 @@ if __name__ == '__main__':
 
     #定义tensorboard回调可视化
     TBCallback = TensorBoard(log_dir=log)
-    cpCallback = keras.callbacks.ModelCheckpoint(filepath=os.path.join(log, 'weight_{epoch:04d}.ckpt'), period=1)
-    my_model = creat_my_model([image_size, image_size, 3], backbone=backbone, pre_weight_path=None, mode='train')
+    cpCallback = keras.callbacks.ModelCheckpoint(filepath=os.path.join(log, 'weight_{epoch:04d}.ckpt'), period=10)
+    my_model = creat_my_model_v10([image_size, image_size, 3], backbone=backbone, pre_weight_path=None, mode='train')
     my_model.summary()
 
 

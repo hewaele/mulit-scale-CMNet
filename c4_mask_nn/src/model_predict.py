@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 import time
 import os
 import sys
-from model_core import creat_my_model, creat_my_model_newaug
+from model_core import creat_my_model, creat_my_model_newaug, creat_my_model_v8, creat_my_model_v9, creat_my_model_v10
 from tf_dataset import filter_image, load_and_prepro_image
 from casia_data_process import get_casiadataset
 from source_buster_model import create_BusterNet_model
@@ -113,19 +113,27 @@ def main():
     # x_list, y_list = get_casiadataset(target_path, mask_path)
 
     # 测试casia增强数据
-    # target_path = '../data/augmentation_data/image'
-    # mask_path = '../data/augmentation_data/mask'
-    # x_list, y_list = get_casiadataset(target_path, mask_path)
+    target_path = '../data/augmentation_data/image'
+    mask_path = '../data/augmentation_data/mask'
+    x_list, y_list = get_casiadataset(target_path, mask_path)
 
     #测试生成数据
     # target_path = '/home/hewaele/PycharmProjects/creat_cmfd_image/cmfd_data/images_small'
     # mask_path = '/home/hewaele/PycharmProjects/creat_cmfd_image/cmfd_data/mask_small'
     # x_list, y_list = get_casiadataset(target_path, mask_path)
 
+    # 测试uscisi数据集
+    # target_path = '../data/uscisi_dataset/images'
+    # mask_path = '../data/uscisi_dataset/mask'
+    # x_list, y_list = get_casiadataset(target_path, mask_path)
+    print(len(x_list))
+    print(len(y_list))
+    print(x_list)
+    print(y_list)
     #载入模型
     pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
-    model = creat_my_model([image_size, image_size, 3], backbone='vgg', pre_weight_path=None, mode='valid')
-    weight_path = '../log/20200115-105214_v4_vgg_without_rescale_mydata6000/weight_0004.ckpt'
+    model = creat_my_model_v10([image_size, image_size, 3], backbone='vgg', pre_weight_path=None, mode='valid')
+    weight_path = '../log/20200307-205340_v10_vgg_without_rescale_casia/weight_0230.ckpt'
     model.load_weights(weight_path)
 
     for i in range(0, 1):
@@ -149,7 +157,7 @@ def main():
             pre_result, x2, x3, x4 = model.predict(np.array(img).reshape([1, image_size, image_size, 3]))
             pre_result -= threshold
             # show_result(pre_result, mask, source)
-            # show_tensor(x2, x3, x4, position=2)
+            # show_tensor(x2, x3, x4, position=0)
             # print(x2.shape)
             # t1 = np.sum(x3, axis=3)
             # for ti in t1[0]:
@@ -169,7 +177,7 @@ def main():
             count += 1
             if f1 >= 0.5:
                 print(count)
-                show_result(pre_result, mask, source)
+                # show_result(pre_result, mask, source)
                 # show_tensor(x2, x3, x4, position=1)
                 TP_c += tp
                 FP_c += fp
