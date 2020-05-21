@@ -74,7 +74,7 @@ def eval_protcal(pre_result, mask):
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     from keras.backend.tensorflow_backend import set_session
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -85,6 +85,7 @@ def main():
     # #载入数据
     image_path = '../data/CoMoFoD_small/'
     x_list, y_list = filter_image(image_path)
+    print(x_list[0:25])
     #测试casia数据
     # target_path = '../data/casia-dataset/target'
     # mask_path = '../data/casia-dataset/mask'
@@ -99,78 +100,84 @@ def main():
     weight_path = '../pre_model/pretrained_busterNet.hd5'
     model = create_BusterNet_model(weight_path)
     model.summary()
-    correct = 0
-    count = 0
-    start = 0
-    end = 5000
-    step = 25
-    threshold = 0.
-    TP, FP, TN, FN, accuracy, precision, recall, F1 = 0, 0, 0, 0, 0, 0, 0, 0
 
-    TP_c, FP_c, TN_c, FN_c, accuracy_c, precision_c, recall_c, F1_c = 0, 0, 0, 0, 0, 0, 0, 0
-    # 单张图片预测
-    statr_time = time.time()
-    for source, mask in zip(['./2m2d.png'], y_list[start:start+1:step]):
-        img = Image.open(source).convert('RGB').resize([image_size, image_size])
-        #执行预测
-        pre_result = model.predict(np.array(img).reshape([1, image_size, image_size, 3]))
-        pre_result = pre_result[0, :, :, 2].ravel() <= 0.5
-        mask = Image.open(mask).convert('L').resize([image_size, image_size])
-        mask = np.array(mask).ravel() != 0
-        show_result(pre_result, mask, img)
-        # show_tensor(x2, x3, x4, position=2)
-        # print(x2.shape)
-        # t1 = np.sum(x3, axis=3)
-        # for ti in t1[0]:
-        #     print('{}'.format(ti))
+    correct_num = []
+    for i in range(1):
+        correct = 0
+        count = 0
+        start = i
+        end = 5000
+        step = 25
+        threshold = 0.
+        TP, FP, TN, FN, accuracy, precision, recall, F1 = 0, 0, 0, 0, 0, 0, 0, 0
 
-        #开始进行评价
-        tp, fp, tn, fn, ac, pre, rc, f1 = eval_protcal(pre_result, mask)
+        TP_c, FP_c, TN_c, FN_c, accuracy_c, precision_c, recall_c, F1_c = 0, 0, 0, 0, 0, 0, 0, 0
+        # 单张图片预测
+        statr_time = time.time()
+        for source, mask in zip(x_list[start:end:step], y_list[start:end:step]):
+            img = Image.open(source).convert('RGB').resize([image_size, image_size])
+            #执行预测
+            pre_result = model.predict(np.array(img).reshape([1, image_size, image_size, 3]))
+            pre_result = pre_result[0, :, :, 2].ravel() <= 0.5
+            mask = Image.open(mask).convert('L').resize([image_size, image_size])
+            mask = np.array(mask).ravel() != 0
+            # show_result(pre_result, mask, img)
+            # show_tensor(x2, x3, x4, position=2)
+            # print(x2.shape)
+            # t1 = np.sum(x3, axis=3)
+            # for ti in t1[0]:
+            #     print('{}'.format(ti))
 
-        TP += tp
-        FP += fp
-        TN += tn
-        FN += fn
-        accuracy += ac
-        precision += pre
-        recall += rc
-        F1 += f1
-        count += 1
-        if f1 >= 0.5:
-            print(count)
-            # show_result(pre_result, mask, source)
-            # show_tensor(x2, x3, x4, position=1)
-            TP_c += tp
-            FP_c += fp
-            TN_c += tn
-            FN_c += fn
-            accuracy_c += ac
-            precision_c += pre
-            recall_c += rc
-            F1_c += f1
-            correct += 1
-        else:
-            print(source)
-            # show_result(pre_result, mask, source)
-            # show_tensor(x2, x3, x4, position=1)
+            #开始进行评价
+            tp, fp, tn, fn, ac, pre, rc, f1 = eval_protcal(pre_result, mask)
+
+            TP += tp
+            FP += fp
+            TN += tn
+            FN += fn
+            accuracy += ac
+            precision += pre
+            recall += rc
+            F1 += f1
+            count += 1
+            if f1 >= 0.5:
+                print(count)
+                # show_result(pre_result, mask, source)
+                # show_tensor(x2, x3, x4, position=1)
+                TP_c += tp
+                FP_c += fp
+                TN_c += tn
+                FN_c += fn
+                accuracy_c += ac
+                precision_c += pre
+                recall_c += rc
+                F1_c += f1
+                correct += 1
+            else:
+                print(source)
+                # show_result(pre_result, mask, source)
+                # show_tensor(x2, x3, x4, position=1)
 
 
-    end_time = time.time()
-    print("consume time:{} process time per img:{}".format(end_time - statr_time, (end_time-statr_time)/count))
-    #输出评价结果
-    print('protocal A: ac:{} precision:{} recall:{} F1:{}'.
-          format((TP + TN) / (TP + TN + FP + FN), TP / (TP + FP), TP / (TP + FN), 2 * TP / (2 * TP + FP + FN)))
+        end_time = time.time()
+        print("consume time:{} process time per img:{}".format(end_time - statr_time, (end_time-statr_time)/count))
+        #输出评价结果
+        print('protocal A: ac:{} precision:{} recall:{} F1:{}'.
+              format((TP + TN) / (TP + TN + FP + FN), TP / (TP + FP), TP / (TP + FN), 2 * TP / (2 * TP + FP + FN)))
 
-    print('protocal B: ac:{} precision:{} recall:{} F1:{}'.
-          format(accuracy / count, precision / count, recall / count, F1 / count))
+        print('protocal B: ac:{} precision:{} recall:{} F1:{}'.
+              format(accuracy / count, precision / count, recall / count, F1 / count))
 
-    print('\ncorrect:{}'.format(correct))
-    print('protocal correct A: ac:{} precision:{} recall:{} F1:{}'.
-          format((TP_c + TN_c) / (TP_c + TN_c + FP_c + FN_c), TP_c / (TP_c + FP_c),
-                 TP_c / (TP_c + FN_c), 2 * TP_c / (2 * TP_c + FP_c + FN_c)))
+        print('\ncorrect:{}'.format(correct))
+        print('protocal correct A: ac:{} precision:{} recall:{} F1:{}'.
+              format((TP_c + TN_c) / (TP_c + TN_c + FP_c + FN_c), TP_c / (TP_c + FP_c),
+                     TP_c / (TP_c + FN_c), 2 * TP_c / (2 * TP_c + FP_c + FN_c)))
 
-    print('protocal correct B: ac:{} precision:{} recall:{} F1:{}'.
-          format(accuracy_c / correct, precision_c / correct, recall_c / correct, F1_c / correct))
+        print('protocal correct B: ac:{} precision:{} recall:{} F1:{}'.
+              format(accuracy_c / correct, precision_c / correct, recall_c / correct, F1_c / correct))
+
+        correct_num.append(correct)
+    print(correct_num)
 
 if __name__ == "__main__":
     main()

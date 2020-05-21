@@ -11,7 +11,7 @@ from tf_dataset import filter_image, load_and_prepro_image
 from casia_data_process import get_casiadataset
 from source_buster_model import create_BusterNet_model
 # tf.enable_eager_execution()
-image_size = 256
+image_size = 512
 def pre2img(result, channel=1):
     """
     将预测结果转换为图片显示
@@ -96,7 +96,7 @@ def eval_protcal(pre_result, mask):
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     from keras.backend.tensorflow_backend import set_session
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -107,22 +107,23 @@ def main():
     # #载入数据
     image_path = '../data/CoMoFoD_small/'
     x_list, y_list = filter_image(image_path)
+    print(x_list[0:25])
     #测试casia数据
     # target_path = '../data/casia-dataset/target'
     # mask_path = '../data/casia-dataset/mask'
     # x_list, y_list = get_casiadataset(target_path, mask_path)
 
     # 测试casia增强数据
-    target_path = '../data/augmentation_data/image'
-    mask_path = '../data/augmentation_data/mask'
-    x_list, y_list = get_casiadataset(target_path, mask_path)
+    # target_path = '../data/augmentation_data/image'
+    # mask_path = '../data/augmentation_data/mask'
+    # x_list, y_list = get_casiadataset(target_path, mask_path)
 
     #测试生成数据
     # target_path = '/home/hewaele/PycharmProjects/creat_cmfd_image/cmfd_data/images_small'
     # mask_path = '/home/hewaele/PycharmProjects/creat_cmfd_image/cmfd_data/mask_small'
     # x_list, y_list = get_casiadataset(target_path, mask_path)
 
-    # 测试uscisi数据集
+    # # 测试uscisi数据集
     # target_path = '../data/uscisi_dataset/images'
     # mask_path = '../data/uscisi_dataset/mask'
     # x_list, y_list = get_casiadataset(target_path, mask_path)
@@ -132,11 +133,15 @@ def main():
     print(y_list)
     #载入模型
     pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
-    model = creat_my_model_v10([image_size, image_size, 3], backbone='vgg', pre_weight_path=None, mode='valid')
-    weight_path = '../log/20200307-205340_v10_vgg_without_rescale_casia/weight_0230.ckpt'
+    model = creat_my_model_v8([image_size, image_size, 3], backbone='vgg', pre_weight_path=None, mode='valid')
+    weight_path = '../log/20200504-233655_v8_vgg_without_rescale_alluscisi_512/weight_0003.ckpt'
+    weight_path = '../log/20200507-160153_v8_vgg_without_rescale_alluscisi_512/weight_0014.ckpt'
+    weight_path = '../log/20200513-213007_v8_vgg_without_rescale_alluscisi_512_finetune/weight_0001.ckpt'
+    # weight_path = '../log/20200515-001110_v8_vgg_without_rescale_alluscisi_512_finetune/weight_0020.ckpt'
+    # weight_path = '../log/20200308-020541_v10_vgg_without_rescale_casia/weight_0160.ckpt'
     model.load_weights(weight_path)
 
-    for i in range(0, 1):
+    for i in range(0, 25):
         print(x_list[i])
         start = i
         end = 5000
@@ -154,7 +159,7 @@ def main():
         for source, mask in zip(x_list[start:end:step], y_list[start:end:step]):
             img = Image.open(source).convert('RGB').resize([image_size, image_size])
             #执行预测
-            pre_result, x2, x3, x4 = model.predict(np.array(img).reshape([1, image_size, image_size, 3]))
+            pre_result, x3, x4 = model.predict(np.array(img).reshape([1, image_size, image_size, 3]))
             pre_result -= threshold
             # show_result(pre_result, mask, source)
             # show_tensor(x2, x3, x4, position=0)
@@ -213,6 +218,7 @@ def main():
         print('protocal correct B: ac:{} precision:{} recall:{} F1:{}'.
               format(accuracy_c / correct, precision_c / correct, recall_c / correct, F1_c / correct))
     print(correct_list)
+
 if __name__ == "__main__":
     main()
 

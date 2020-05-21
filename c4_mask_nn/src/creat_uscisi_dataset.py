@@ -19,32 +19,35 @@ dataset = USCISI_CMD_API( lmdb_dir=lmdb_dir,
 # Retrieve the first 24 samples in the dataset
 #%%
 
-samples = dataset(range(100000))
+samples = dataset(range(100))
 
 count = 0
 for si in samples:
     # print(len(si))
     count += 1
-    try:
-        print(count)
-        image = si[0]
-        mask = si[1]
-        image = Image.fromarray(image)
-        # mask = np.round(np.logical_not(mask[:, :, 2])) * 255
-        # print(mask)
-        mask = Image.fromarray(np.uint8(mask)*255)
-        # Image.Image.show(mask)
-        image.save(os.path.join(image_path, 'image_' + str(count) + '.png'))
-        mask.save(os.path.join(mask_path, 'mask_' + str(count) + '.png'))
+    if count == 39:
+        print(np.array(si).shape)
+        try:
+            print(count)
+            image = si[0]
+            mask = si[1]
+            image = Image.fromarray(image)
+            # mask = np.round(np.logical_not(mask[:, :, 2])) * 255
+            # print(mask)
+            mask = Image.fromarray(np.uint8(mask)*255)
+            # Image.Image.show(mask)
+            # image.save(os.path.join(image_path, 'image_' + str(count) + '.png'))
+            # mask.save(os.path.join(mask_path, 'mask_' + str(count) + '.png'))
 
-    except:
-        pass
-    # # plt.imshow(si[1][:,:, 0])
-    # # plt.show()
-    # # plt.imshow(si[1][:, :, 1])
-    # # plt.show()
-    # plt.imshow(si[1])
-    # plt.show()
+        except:
+            pass
+
+        plt.imshow(si[0][:,:, 2])
+        plt.show()
+        # # plt.imshow(si[1][:, :, 1])
+        # # plt.show()
+        # plt.imshow(si[1])
+        # plt.show()
     if count == 100000:
         break
 

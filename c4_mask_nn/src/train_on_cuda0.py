@@ -24,12 +24,12 @@ if __name__ == '__main__':
     config.gpu_options.allow_growth = True
     set_session(tf.Session(config=config))
 
-    image_size = 256
+    image_size = 512
     batchs = 2
-    epochs = 1000
+    epochs = 500
 
     #load data
-    log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v9_vgg_without_rescale/'
+    log = '../log/' + time.strftime('%Y%m%d-%H%M%S')+'_v8_vgg_without_rescale_alluscisi_512_finetune/'
     backbone = 'vgg'
     if backbone == 'vgg':
         pre_weight_path = '../pre_model/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
@@ -38,48 +38,54 @@ if __name__ == '__main__':
 
     retrain = True
     ckpt_path = '../log/20200225-182940_v8_vgg_without_rescale/weight_0999.ckpt'
-
-
+    ckpt_path = '../log/20200405-103704_v8_vgg_without_rescale_uscisi_512/weight_0500.ckpt'
+    ckpt_path = '../log/20200409-222845_v8_vgg_without_rescale_alluscisi_512/weight_0010.ckpt'
+    ckpt_path = '../log/20200413-212119_v8_vgg_without_rescale_alluscisi_512/weight_0003.ckpt'
+    ckpt_path = '../log/20200418-001143_v8_vgg_without_rescale_alluscisi_512/weight_0021.ckpt'
+    ckpt_path = '../log/20200427-104603_v8_vgg_without_rescale_alluscisi_512/weight_0016.ckpt'
+    ckpt_path = '../log/20200504-233655_v8_vgg_without_rescale_alluscisi_512/weight_0003.ckpt'
+    ckpt_path = '../log/20200507-160153_v8_vgg_without_rescale_alluscisi_512/weight_0001.ckpt'
+    ckpt_path = '../log/20200513-164937_v8_vgg_without_rescale_alluscisi_512_finetune/weight_0080.ckpt'
     #comofod数据集
     image_path = '../data/CoMoFoD_small'
     x_list, y_list = filter_image(image_path)
     #创建测试训练集
-    test_xy = my_generator(x_list[::25], y_list[::25], batchs, 256, rescale=False)
+    test_xy = my_generator(x_list[::25], y_list[::25], batchs, 512, rescale=False)
 
     #训练casia数据集，测试comofod数据集
-    # target_path = '../data/casia-dataset/target'
-    # mask_path = '../data/casia-dataset/mask'
-    # x_list, y_list = get_casiadataset(target_path, mask_path)
+    target_path = '../data/casia-dataset/target'
+    mask_path = '../data/casia-dataset/mask'
+    x_list, y_list = get_casiadataset(target_path, mask_path)
 
     #训练casia增强数据集，测试comofod数据集
     # target_path = '../data/augmentation_data/image'
     # mask_path = '../data/augmentation_data/mask'
     # x_list, y_list = get_casiadataset(target_path, mask_path)
 
-    # 训练USCISI增强数据集，测试comofod数据集
-    target_path = '../data/uscisi_dataset/images'
-    mask_path = '../data/uscisi_dataset/mask'
-    x_list, y_list = get_casiadataset(target_path, mask_path)
+    # 训练USCISI数据集，测试comofod数据集
+    # target_path = '../data/uscisi_dataset/images'
+    # mask_path = '../data/uscisi_dataset/mask'
+    # x_list, y_list = get_casiadataset(target_path, mask_path)
 
-    x_list = x_list[:]
-    y_list = y_list[:]
+    # x_list = x_list[:90000]
+    # y_list = y_list[:90000]
     nums = len(x_list)
 
     x_list, y_list = shuffle(x_list, y_list)
-    train_xy = my_generator(x_list, y_list, batchs, 256, rescale=False)
+    train_xy = my_generator(x_list, y_list, batchs, 512, rescale=False)
     print('data load done')
 
     #定义tensorboard回调可视化
     TBCallback = TensorBoard(log_dir=log)
-    cpCallback = keras.callbacks.ModelCheckpoint(filepath=os.path.join(log, 'weight_{epoch:04d}.ckpt'), period=1)
-    my_model = creat_my_model_v10([image_size, image_size, 3], backbone=backbone,
-                              pre_weight_path=None, mode='train', train_backbone=True)
+    cpCallback = keras.callbacks.ModelCheckpoint(filepath=os.path.join(log, 'weight_{epoch:04d}.ckpt'), period=5)
+    my_model = creat_my_model_v8([image_size, image_size, 3], backbone=backbone,
+                              pre_weight_path=None, mode='train', train_backbone=False)
     my_model.summary()
 
 
-    # my_model.load_weights(ckpt_path)
+    my_model.load_weights(ckpt_path)
 
-    my_model.compile(optimizer=keras.optimizers.Adam(0.0001),
+    my_model.compile(optimizer=keras.optimizers.Adam(0.0000001),
                      loss=keras.losses.binary_crossentropy,
                      metrics=['accuracy'])
 
@@ -89,7 +95,7 @@ if __name__ == '__main__':
                  epochs=epochs,
                  validation_data=test_xy,
 
-                 validation_steps=100,
+                 validation_steps=200,
                  # workers=4,
                  # use_multiprocessing=True,
                  callbacks=[TBCallback, cpCallback],
